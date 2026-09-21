@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lazer fizikasi — virtual laboratoriya</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;650&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#16222E; --muted:#5B6B7A; --line:#D5DCE3;
+  --accent:#0F6E7C; --accent-ink:#FFFFFF; --soft:#E3F1F3; --bench:#0D141A; --bench-ink:#C9D6E0;
+  --warn:#B42318; --ok:#1B7F4B; --lcd:#0B1F17; --lcd-ink:#7CF0B0;
+  --ui:"Commissioner","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+  --mono:"Spline Sans Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#10171E; --panel:#182129; --ink:#E6EDF3; --muted:#9AA9B7; --line:#2A3641;
+  --accent:#3FB6C6; --accent-ink:#06262B; --soft:#15323A; --warn:#FF8A7A; --ok:#5FD39A; }}
+:root[data-theme="dark"]{
+  --bg:#10171E; --panel:#182129; --ink:#E6EDF3; --muted:#9AA9B7; --line:#2A3641;
+  --accent:#3FB6C6; --accent-ink:#06262B; --soft:#15323A; --warn:#FF8A7A; --ok:#5FD39A; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--ui)}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:650;font-size:1.15rem;letter-spacing:-.01em;margin-right:auto}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:.8rem;letter-spacing:0}
+.top label{font-size:.85rem;color:var(--muted);display:flex;gap:8px;align-items:center}
+.top input{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 8px;width:11rem}
+.top input[type=number]{width:4.5rem}
+.shell{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:80vh}
+nav{border-right:1px solid var(--line);padding:16px 10px;background:var(--panel)}
+nav button{display:grid;grid-template-columns:2rem 1fr;gap:4px;width:100%;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px;cursor:pointer;line-height:1.3;font-size:.93rem}
+nav button b{font-family:var(--mono);font-weight:500;color:var(--muted)}
+nav button:hover{background:var(--bg)}
+nav button[aria-current=true]{background:var(--soft);color:var(--ink)}
+nav button[aria-current=true] b{color:var(--accent)}
+nav button span small{display:block;color:var(--muted);font-size:.76rem}
+main{min-width:0;padding:22px clamp(14px,3vw,36px) 60px;max-width:1180px}
+h1{font-size:clamp(1.35rem,2.4vw,1.8rem);line-height:1.2;margin:0 0 6px;font-weight:650;letter-spacing:-.015em}
+.goal{color:var(--muted);max-width:70ch;margin:0 0 18px}
+h2{font-size:1.02rem;margin:26px 0 10px;font-weight:650}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.tabs button{border:1px solid var(--line);background:var(--panel);padding:7px 14px;border-radius:999px;cursor:pointer;font-size:.9rem}
+.tabs button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.rig{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;align-items:start}
+.bench{background:var(--bench);border-radius:12px;padding:10px;color:var(--bench-ink);min-width:0}
+.bench canvas{display:block;width:100%;border-radius:6px;touch-action:none}
+.card canvas{display:block;width:100%}
+.bench .cap,.card .cap{font-size:.78rem;color:#8ea2b3;margin:6px 4px 2px}
+.side{display:grid;gap:10px}
+.lcd{min-width:0;overflow:hidden;background:var(--lcd);color:var(--lcd-ink);border-radius:10px;padding:10px 14px;font-family:var(--mono)}
+.lcd .k{font-family:var(--ui);font-size:.74rem;color:#8fb8a3;display:block}
+.lcd .v{font-size:1.5rem;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.lcd .u{font-size:.85rem;color:#8fb8a3;margin-left:6px}
+.lcd.off .v{opacity:.25}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.ctl{display:grid;gap:4px;margin:0 0 12px}
+.ctl:last-child{margin-bottom:0}
+.ctl .row{display:flex;justify-content:space-between;gap:10px;font-size:.88rem}
+.ctl .row output{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ctl .in{display:flex;gap:6px;align-items:center}
+.ctl .nud{flex-wrap:wrap}
+.ctl input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ctl select{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 8px;width:100%}
+.nb{border:1px solid var(--line);background:var(--bg);border-radius:6px;min-width:1.9rem;height:2rem;cursor:pointer;font-family:var(--mono);font-size:.74rem;padding:0 5px;white-space:nowrap}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:500}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.danger{border-color:var(--warn);background:none;color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.chk{display:flex;gap:8px;align-items:center;font-size:.9rem;margin:0 0 8px}
+.chk input{accent-color:var(--accent);width:1.05rem;height:1.05rem}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:0 22px}
+.cols>*{min-width:0}
+ol.steps{margin:0;padding-left:1.35rem;max-width:78ch}
+ol.steps li{margin:0 0 6px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:14px 0 0}
+details summary{cursor:pointer;font-weight:500}
+details p,details li{max-width:78ch}
+.f{font-family:var(--mono);background:var(--bg);border-radius:6px;padding:2px 7px;font-size:.9em;overflow-wrap:anywhere}
+.scroll{overflow-x:auto}
+table.j{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+table.j th{font-weight:500;text-align:right;color:var(--muted);border-bottom:1px solid var(--line);padding:6px 8px;white-space:nowrap}
+table.j td{text-align:right;border-bottom:1px solid var(--line);padding:4px 8px;font-family:var(--mono);white-space:nowrap}
+table.j td input{width:6.2rem;border:1px solid var(--line);background:var(--bg);border-radius:5px;padding:3px 6px;text-align:right;font-family:var(--mono)}
+table.j td button{border:0;background:none;color:var(--muted);cursor:pointer}
+.empty{color:var(--muted);font-size:.9rem;padding:10px 2px}
+.verify{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+.verify label{min-width:min(15rem,100%);font-size:.9rem}
+.verify input{width:7.5rem;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px;font-family:var(--mono)}
+.verify .res{font-size:.88rem}
+.res.ok{color:var(--ok)} .res.bad{color:var(--warn)}
+.note{border-left:3px solid var(--warn);background:var(--panel);padding:8px 12px;border-radius:0 8px 8px 0;font-size:.9rem;margin:12px 0;max-width:78ch}
+.pass{font-size:.85rem;color:var(--muted);margin:0}
+.pass b{color:var(--ink);font-weight:500}
+.quiz fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 10px;padding:10px 14px;background:var(--panel)}
+.quiz legend{font-weight:500;padding:0 6px}
+.quiz label{display:block;padding:3px 0;font-size:.93rem}
+.quiz .right{color:var(--ok)} .quiz .wrong{color:var(--warn)}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr}
+  nav{border-right:0;border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;padding:8px 10px}
+  nav button{width:auto;white-space:nowrap;grid-template-columns:auto auto}
+  nav button span small{display:none}
+  .rig{grid-template-columns:1fr}
+  .side{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .lcd .v{font-size:1.25rem}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">Lazer fizikasi — virtual laboratoriya<small>UrDU “Fizika” kafedrasi, PHY 403 fani bo‘yicha 9 ta laboratoriya ishi</small></div>
+  <label>Talaba <input id="who" placeholder="Familiya, ism, guruh" autocomplete="off"></label>
+  <label>Variant № <input id="variant" type="number" min="1" max="30" value="1"></label>
+</header>
+<div class="shell">
+  <nav id="nav" aria-label="Laboratoriya ishlari"></nav>
+  <main id="main"></main>
+</div>
+<script>
+"use strict";
+const C=299792458, H=6.62607e-34, QE=1.602177e-19;
+const $=(s,r=document)=>r.querySelector(s);
+function el(tag,attrs,...kids){const e=document.createElement(tag);
+  if(attrs)for(const k in attrs){const v=attrs[k];
+    if(k==='class')e.className=v;else if(k==='html')e.innerHTML=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else if(v===true)e.setAttribute(k,'');else if(v!==false&&v!=null)e.setAttribute(k,v);}
+  for(const c of kids.flat()){if(c==null)continue;e.append(c.nodeType?c:document.createTextNode(c));}
+  return e;}
+const store={get(k,d){try{const v=localStorage.getItem('lf_'+k);return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem('lf_'+k,v)}catch(e){}}};
+let VARIANT=Math.min(30,Math.max(1,parseInt(store.get('variant','1'))||1));
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+/* variantga bog‘liq yashirin parametr: lab raqami va kalit bo‘yicha [lo,hi] oralig‘ida */
+function V(lab,key,lo,hi){let h=VARIANT*7919+lab*104729;for(const ch of key)h=(h*31+ch.charCodeAt(0))|0;const r=mulberry(h);r();return lo+(hi-lo)*r()}
+function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+const noisy=(x,rel,abs=0)=>x*(1+rel*gauss())+abs*gauss();
+const fmt=(x,d=2)=>Number.isFinite(x)?x.toFixed(d).replace('.',','):'—';
+function nm2rgb(w,a=1){let r=0,g=0,b=0;
+  if(w<440){r=-(w-440)/60;b=1}else if(w<490){g=(w-440)/50;b=1}else if(w<510){g=1;b=-(w-510)/20}
+  else if(w<580){r=(w-510)/70;g=1}else if(w<645){r=1;g=-(w-645)/65}else{r=1}
+  let f=1;if(w<420)f=.35+.65*(w-380)/40;else if(w>700)f=.35+.65*(780-w)/80;
+  const c=x=>Math.round(255*Math.pow(Math.max(0,x)*f,.8));return `rgba(${c(r)},${c(g)},${c(b)},${a})`}
+/* ---------- boshqaruv elementlari ---------- */
+function slider(o){const dec=o.dec??(String(o.step).split('.')[1]||'').length;
+  const out=el('output',null,''),inp=el('input',{type:'range',min:o.min,max:o.max,step:o.step,value:o.value,'aria-label':o.label});
+  const show=()=>out.textContent=fmt(+inp.value,dec)+(o.unit?' '+o.unit:'');
+  const fire=()=>{show();o.oninput&&o.oninput(+inp.value)};
+  inp.addEventListener('input',fire);
+  const nudge=(k)=>el('button',{class:'nb',type:'button',title:(k>0?'+':'−')+fmt(Math.abs(k),dec),onclick:()=>{inp.value=Math.min(o.max,Math.max(o.min,+inp.value+k));fire()}},(k>0?'+':'−')+(o.nudgeLabel?o.nudgeLabel(Math.abs(k)):''));
+  const steps=o.nudges||[o.step];
+  const root=steps.length>1?el('div',{class:'ctl'},el('div',{class:'row'},el('span',null,o.label),out),el('div',{class:'in'},inp),
+      el('div',{class:'in nud'},steps.slice().reverse().map(s=>nudge(-s)),el('span',{style:'flex:1'}),steps.map(s=>nudge(s))))
+    :el('div',{class:'ctl'},el('div',{class:'row'},el('span',null,o.label),out),el('div',{class:'in'},nudge(-steps[0]),inp,nudge(steps[0])));
+  show();return{root,get:()=>+inp.value,set:v=>{inp.value=v;show()},el:inp}}
+function select(o){const s=el('select',{'aria-label':o.label,onchange:()=>o.onchange&&o.onchange(s.value)},o.options.map(([v,t])=>el('option',{value:v},t)));
+  if(o.value!=null)s.value=o.value;return{root:el('div',{class:'ctl'},el('div',{class:'row'},el('span',null,o.label)),s),get:()=>s.value,set:v=>s.value=v}}
+function check(label,val,onchange){const i=el('input',{type:'checkbox',onchange:()=>onchange&&onchange(i.checked)});i.checked=!!val;
+  return{root:el('label',{class:'chk'},i,label),get:()=>i.checked,set:v=>i.checked=v}}
+const button=(t,fn,kind='')=>el('button',{class:'btn '+kind,type:'button',onclick:fn},t);
+function lcd(label,unit){const v=el('span',{class:'v'},'—'),root=el('div',{class:'lcd'},el('span',{class:'k'},label),v,el('span',{class:'u'},unit||''));
+  return{root,set:(x,d=2)=>{v.textContent=typeof x==='string'?x:fmt(x,d)},off:b=>root.classList.toggle('off',b),unit:u=>root.lastChild.textContent=u}}
+/* ---------- o‘lchash jurnali ---------- */
+function journal(cols,opt={}){const rows=[];const body=el('tbody'),empty=el('div',{class:'empty'},opt.empty||'Jurnal bo‘sh. O‘lchash natijasini yozish uchun “Jadvalga yozish” tugmasini bosing.');
+  const tbl=el('table',{class:'j'},el('thead',null,el('tr',null,el('th',null,'№'),cols.map(c=>el('th',null,c.h)),el('th',null,''))),body);
+  const api={rows,onchange:null};
+  function render(){body.textContent='';rows.forEach((r,i)=>{body.append(el('tr',null,el('td',null,String(i+1)),cols.map((c,j)=>{
+      if(c.edit){const inp=el('input',{inputmode:'decimal',value:r[j]??'','aria-label':c.h,oninput:()=>{r[j]=inp.value;api.onchange&&api.onchange()}});return el('td',null,inp)}
+      return el('td',null,typeof r[j]==='number'?fmt(r[j],c.d??3):String(r[j]??''))}),
+      el('td',null,el('button',{title:'Satrni o‘chirish',onclick:()=>{rows.splice(i,1);render();api.onchange&&api.onchange()}},'✕'))))});
+    empty.hidden=rows.length>0;tbl.hidden=rows.length===0}
+  api.add=r=>{rows.push(r);render();api.onchange&&api.onchange()};
+  api.clear=()=>{rows.length=0;render();api.onchange&&api.onchange()};
+  api.num=(i,j)=>{const v=rows[i][j];return typeof v==='number'?v:parseFloat(String(v).replace(',','.'))};
+  const csv=()=>[cols.map(c=>c.h).join('\t'),...rows.map(r=>r.map(v=>typeof v==='number'?String(v).replace('.',','):v??'').join('\t'))].join('\n');
+  const msg=el('span',{class:'res'});
+  const copy=button('Jadvaldan nusxa olish (Excel uchun)',async()=>{const t=csv();let ok=false;try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+    if(!ok){const ta=el('textarea',{style:'width:100%;height:120px;margin-top:8px;font:12px var(--mono)'});ta.value=t;api.root.append(ta);ta.select()}
+    msg.textContent=ok?'Nusxa olindi — Excelga qo‘ying (Ctrl+V).':'Matnni belgilab, Ctrl+C bilan nusxa oling.'},'ghost');
+  api.root=el('div',null,el('div',{class:'scroll'},tbl),empty,el('div',{class:'btns'},copy,button('Jurnalni tozalash',()=>api.clear(),'ghost'),msg));
+  render();return api}
+/* ---------- natijani tekshirish ---------- */
+function verify(items){return el('div',{class:'card'},items.map(it=>{const inp=el('input',{inputmode:'decimal',placeholder:it.unit,'aria-label':it.label}),res=el('span',{class:'res'});
+    const go=()=>{const x=parseFloat(inp.value.replace(',','.'));if(!Number.isFinite(x)){res.className='res bad';res.textContent='Son kiriting.';return}
+      const t=it.truth(),err=it.abs!=null?Math.abs(x-t):Math.abs(x-t)/Math.abs(t),ok=err<=(it.abs??it.tol);
+      res.className='res '+(ok?'ok':'bad');
+      res.textContent=ok?`To‘g‘ri: farq ${it.abs!=null?fmt(err,3)+' '+it.unit:fmt(err*100,1)+' %'} — ruxsat etilgan chegarada.`:`Farq katta (${it.abs!=null?fmt(err,3)+' '+it.unit:fmt(err*100,1)+' %'}). O‘lchash va hisoblarni, ayniqsa birliklarni qayta tekshiring.`};
+    return el('div',{class:'verify'},el('label',null,it.label),inp,button('Tekshirish',go,'ghost'),res)}))}
+/* ---------- canvas yordamchilari ---------- */
+function fit(cv,h){const dpr=Math.min(2,window.devicePixelRatio||1),w=Math.max(280,cv.clientWidth||cv.parentNode.clientWidth||600);
+  cv.style.height=h+'px';cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w,h}}
+function niceTicks(a,b,n=5){if(a===b){a-=1;b+=1}const s=(b-a)/n,p=Math.pow(10,Math.floor(Math.log10(s))),m=[1,2,5,10].find(k=>k*p>=s)*p;const t=[];for(let v=Math.ceil(a/m)*m;v<=b+1e-9;v+=m)t.push(+v.toFixed(10));return t}
+/* grafik: series=[{pts:[[x,y]],color,line,dots}], hover=true bo‘lsa kursor koordinatasi ko‘rsatiladi */
+function plot(cv,o){const{g,w,h}=fit(cv,o.height||260);const css=getComputedStyle(document.documentElement),ink=css.getPropertyValue('--ink'),mut=css.getPropertyValue('--muted'),ln=css.getPropertyValue('--line');
+  const L=58,R=14,T=14,B=42;let xs=[],ys=[];o.series.forEach(s=>s.pts.forEach(p=>{if(Number.isFinite(p[0])&&Number.isFinite(p[1])){xs.push(p[0]);ys.push(p[1])}}));
+  g.clearRect(0,0,w,h);g.font='12px '+css.getPropertyValue('--ui');
+  if(!xs.length){g.fillStyle=mut;g.fillText(o.empty||'Grafik uchun jurnalda kamida ikkita nuqta bo‘lishi kerak.',L,h/2);cv._map=null;return}
+  let x0=o.xmin??Math.min(...xs),x1=o.xmax??Math.max(...xs),y0=o.ymin??Math.min(...ys),y1=o.ymax??Math.max(...ys);
+  if(x0===x1){x0-=1;x1+=1}if(y0===y1){y0-=1;y1+=1}const py=(y1-y0)*.06;if(o.ymin==null)y0-=py;y1+=py;
+  const X=x=>L+(x-x0)/(x1-x0)*(w-L-R),Y=y=>h-B-(y-y0)/(y1-y0)*(h-T-B);
+  g.strokeStyle=ln;g.fillStyle=mut;g.lineWidth=1;g.textAlign='center';
+  niceTicks(x0,x1,6).forEach(t=>{g.beginPath();g.moveTo(X(t),T);g.lineTo(X(t),h-B);g.stroke();g.fillText(String(t).replace('.',','),X(t),h-B+16)});
+  g.textAlign='right';niceTicks(y0,y1,5).forEach(t=>{g.beginPath();g.moveTo(L,Y(t));g.lineTo(w-R,Y(t));g.stroke();g.fillText(String(t).replace('.',','),L-6,Y(t)+4)});
+  g.fillStyle=ink;g.textAlign='center';g.fillText(o.xlabel||'',(L+w-R)/2,h-8);g.save();g.translate(13,(T+h-B)/2);g.rotate(-Math.PI/2);g.fillText(o.ylabel||'',0,0);g.restore();
+  (o.hlines||[]).forEach(hl=>{g.strokeStyle=hl.color||mut;g.setLineDash([5,4]);g.beginPath();g.moveTo(L,Y(hl.y));g.lineTo(w-R,Y(hl.y));g.stroke();g.setLineDash([]);g.fillStyle=hl.color||mut;g.textAlign='left';g.fillText(hl.label||'',L+6,Y(hl.y)-5)});
+  o.series.forEach(s=>{g.strokeStyle=g.fillStyle=s.color||'#c0182b';g.lineWidth=1.8;
+    if(s.line){g.beginPath();s.pts.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.stroke()}
+    if(s.dots!==false)s.pts.forEach(p=>{g.beginPath();g.arc(X(p[0]),Y(p[1]),s.r||3.2,0,7);g.fill()})});
+  cv._map={x0,x1,y0,y1,L,R,T,B,w,h};
+  if(o.hover&&!cv._hov){cv._hov=true;const tip=el('div',{class:'cap'},'Kursorni grafik ustiga olib boring — nuqta koordinatalari shu yerda ko‘rinadi.');cv.after(tip);
+    cv.addEventListener('pointermove',e=>{const m=cv._map;if(!m)return;const r=cv.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+      const x=m.x0+(mx-m.L)/(m.w-m.L-m.R)*(m.x1-m.x0),y=m.y0+(m.h-m.B-my)/(m.h-m.T-m.B)*(m.y1-m.y0);
+      tip.textContent=o.hover(x,y)})}}
+/* eng kichik kvadratlar */
+function linfit(p){const n=p.length;let sx=0,sy=0,sxx=0,sxy=0;p.forEach(([x,y])=>{sx+=x;sy+=y;sxx+=x*x;sxy+=x*y});const k=(n*sxy-sx*sy)/(n*sxx-sx*sx);return{k,b:(sy-k*sx)/n}}
+/* ---------- ilova karkasi ---------- */
+const LABS=[];let current=null,raf=0,cleanup=[];
+function loop(fn){let last=performance.now();const tick=t=>{const dt=Math.min(.1,(t-last)/1000);last=t;fn(dt,t/1000);raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick)}
+function onResize(fn){let t;const h=()=>{clearTimeout(t);t=setTimeout(fn,120)};window.addEventListener('resize',h);cleanup.push(()=>window.removeEventListener('resize',h))}
+function section(title,...kids){return[el('h2',null,title),...kids]}
+function steps(list){return el('ol',{class:'steps'},list.map(s=>el('li',{html:s})))}
+function theory(title,html){return el('details',null,el('summary',null,title),el('div',{html}))}
+function tabs(defs,host){const bar=el('div',{class:'tabs',role:'tablist'}),body=el('div');
+  const open=i=>{cancelAnimationFrame(raf);[...bar.children].forEach((b,j)=>b.setAttribute('aria-selected',j===i));body.textContent='';defs[i].build(body)};
+  defs.forEach((d,i)=>bar.append(el('button',{role:'tab',type:'button',onclick:()=>open(i)},d.name)));host.append(bar,body);open(0)}
+function show(id){cancelAnimationFrame(raf);cleanup.forEach(f=>f());cleanup=[];current=id;store.set('lab',id);
+  const lab=LABS.find(l=>l.id===id)||LABS[0],main=$('#main');main.textContent='';
+  [...$('#nav').children].forEach(b=>b.setAttribute('aria-current',b.dataset.id==lab.id));
+  main.append(el('h1',null,lab.id>9?lab.title:`${lab.id}-ish. ${lab.title}`),el('p',{class:'goal'},lab.goal));lab.build(main);window.scrollTo(0,0)}
+function boot(){const nav=$('#nav');LABS.forEach(l=>nav.append(el('button',{type:'button','data-id':l.id,onclick:()=>show(l.id)},el('b',null,l.id>9?'★':String(l.id)),el('span',null,l.short,el('small',null,l.kind)))));
+  const v=$('#variant'),who=$('#who');v.value=VARIANT;who.value=store.get('who','');
+  who.addEventListener('input',()=>store.set('who',who.value));
+  v.addEventListener('change',()=>{VARIANT=Math.min(30,Math.max(1,parseInt(v.value)||1));v.value=VARIANT;store.set('variant',VARIANT);show(current)});
+  show(parseInt(store.get('lab','1'))||1)}
+/* ---------- stend chizish yordamchilari ---------- */
+function gLabel(g,t,x,y,al='center',c='#9fb3c4'){g.font='12px Commissioner,Segoe UI,sans-serif';g.fillStyle=c;g.textAlign=al;g.fillText(t,x,y)}
+function gBox(g,x,y,w,h,fill='#2b3a47',stroke='#52677a'){g.fillStyle=fill;g.strokeStyle=stroke;g.lineWidth=1.2;g.beginPath();g.roundRect(x,y,w,h,4);g.fill();g.stroke()}
+function gBeam(g,x1,y1,x2,y2,nm,a=1,wd=3){if(a<=0.003)return;g.save();g.lineCap='round';g.strokeStyle=nm2rgb(nm,.25*Math.min(1,a));g.lineWidth=wd*3.2;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+  g.strokeStyle=nm2rgb(nm,Math.min(1,.25+a));g.lineWidth=wd;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();g.restore()}
+function gRail(g,w,y){g.fillStyle='#1a242d';g.fillRect(16,y,w-32,8);g.fillStyle='#2a3743';for(let x=30;x<w-30;x+=26)g.fillRect(x,y+3,2,2)}
+
+/* ================= 1-ish: xavfsizlik ================= */
+LABS.push({id:1,short:'Texnika xavfsizligi',kind:'trenajyor va test',title:'Texnika xavfsizligi qoidalari bilan tanishish',
+goal:'Lazerning xavflilik sinfini uning parametrlari bo‘yicha aniqlashni o‘rganing va xavfsizlik qoidalari bo‘yicha testdan o‘ting. Testdan 80 % va undan yuqori natija — keyingi ishlarga ruxsat.',
+build(main){
+  const lam=slider({label:'To‘lqin uzunligi λ',min:400,max:700,step:1,value:633,unit:'nm',oninput:upd});
+  const P=slider({label:'Nurlanish quvvati P (logarifmik shkala)',min:-1,max:4,step:.01,value:.48,dec:2,oninput:upd});
+  const D=slider({label:'Dasta diametri',min:.5,max:10,step:.1,value:1,unit:'mm',oninput:upd});
+  const cv=el('canvas'),cls=lcd('Xavflilik sinfi (IEC 60825-1)',''),I1=lcd('Dastadagi intensivlik','W/m²'),I2=lcd('To‘r pardadagi intensivlik (dog‘ 20 µm)','W/m²'),OD=lcd('Himoya ko‘zoynagining zarur optik zichligi','');
+  const info=el('p',{class:'pass'});
+  function upd(){const p=Math.pow(10,P.get()),mw=p,w=mw/1000,d=D.get()/1000;
+    P.root.querySelector('output').textContent=(mw<10?fmt(mw,2):fmt(mw,0))+' mW';
+    const c=mw<=.39?'1':mw<=1?'2':mw<=5?'3R':mw<=500?'3B':'4';cls.set(c);
+    const i1=w/(Math.PI*d*d/4),pupil=Math.min(1,(7/(D.get()))**2),i2=w*pupil/(Math.PI*(10e-6)**2);
+    I1.set(i1.toExponential(2).replace('.',','));I2.set(i2.toExponential(2).replace('.',','));
+    OD.set(mw<=.39?'kerak emas':'D ≥ '+fmt(Math.log10(mw/.39),1));
+    info.innerHTML={'1':'<b>1-sinf.</b> Har qanday sharoitda xavfsiz.','2':'<b>2-sinf.</b> Ko‘zni 0,25 s ichida yumish refleksi himoya qiladi. Dastaga ataylab qaramang.','3R':'<b>3R-sinf.</b> Dastaga to‘g‘ridan-to‘g‘ri qarash xavfli. Dasta ko‘z sathidan past o‘tkaziladi.','3B':'<b>3B-sinf.</b> To‘g‘ri va ko‘zgudan qaytgan nur xavfli. Himoya ko‘zoynagi shart.','4':'<b>4-sinf.</b> Sochilgan nur ham ko‘z va teri uchun xavfli, yong‘in xavfi bor. Yopiq dasta yo‘li, ko‘zoynak, ogohlantiruvchi belgilar shart.'}[c];
+    const{g,w:W,h}=fit(cv,170);g.clearRect(0,0,W,h);gRail(g,W,130);gBox(g,30,70,110,44);gLabel(g,'Lazer',85,97,'center','#dfe8ef');
+    const a=Math.min(1,.15+P.get()/4);gBeam(g,140,92,W-130,92,lam.get(),a,Math.max(2,D.get()*1.2));
+    g.strokeStyle='#8fa5b7';g.lineWidth=2;g.beginPath();g.ellipse(W-90,92,46,26,0,0,7);g.stroke();g.beginPath();g.arc(W-104,92,11,0,7);g.fillStyle='#1d2a35';g.fill();g.stroke();
+    g.fillStyle=c==='1'||c==='2'?'#5fd39a':c==='3R'?'#f0c040':'#ff6b5a';g.beginPath();g.arc(W-58,92,4+Math.min(9,P.get()*2.2),0,7);g.fill();
+    gLabel(g,'ko‘z (sxematik): gavhar nurni to‘r pardaga fokuslaydi',W-90,150)}
+  main.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Surgichlarni o‘zgartirib, quvvat va dasta diametri xavflilik sinfiga qanday ta’sir qilishini kuzating.')),el('div',{class:'side'},cls.root,I1.root,I2.root,OD.root)),
+    el('div',{class:'card',style:'margin-top:14px'},el('div',{class:'cols'},lam.root,P.root,D.root),info));
+  main.append(...section('Topshiriqlar',steps(['Laboratoriyadagi o‘quv He–Ne lazeri (632,8 nm; 2 mW; dasta diametri 1 mm) qaysi sinfga kiradi? Dastadagi intensivlikni Quyosh nurlanishi (≈1000 W/m²) bilan taqqoslang.','Quvvati 5 mW bo‘lgan lazer ko‘rsatkich uchun to‘r pardadagi intensivlik dastadagidan necha marta katta? Nima uchun?','Quvvati 2 W bo‘lgan argon lazeri bilan ishlash uchun qanday optik zichlikli ko‘zoynak kerak? D = lg(P/P<sub>xavfsiz</sub>) formulasi bilan tekshiring.','Dasta diametri 1 mm dan 10 mm gacha kengaytirilsa, intensivlik necha marta kamayadi? Xavflilik sinfi o‘zgaradimi?'])));
+  const Q=[['Lazer nuri shu quvvatdagi lampa nuridan nima uchun xavfliroq?',['U issiqroq','U juda kichik burchak ostida tarqaladi va ko‘z uni to‘r pardada nuqtaga fokuslaydi','Uning chastotasi yuqoriroq','U ultrabinafsha nur chiqaradi'],1],
+   ['Ko‘z uchun eng xavfli spektral soha qaysi?',['180–315 nm','400–1400 nm','1,4–3 µm','10,6 µm'],1],
+   ['2-sinf lazerida ko‘zni nima himoya qiladi?',['Himoya ko‘zoynagi','Ko‘zni yumish refleksi (0,25 s)','Dastaning kengligi','Hech narsa'],1],
+   ['Lazer dastasi qanday balandlikda o‘tkaziladi?',['Aynan ko‘z sathida','Ko‘z sathidan past yoki baland gorizontal tekislikda','Farqi yo‘q','Shiftga yo‘naltirib'],1],
+   ['Ishdan oldin soat va uzuk nima uchun yechiladi?',['Ular magnitlanadi','Ular dastani tasodifiy yo‘nalishda qaytarishi mumkin','Ular qizib ketadi','Statik zaryad to‘planadi'],1],
+   ['Dasta yo‘liga linza qo‘yishdan oldin nima qilinadi?',['Quvvat oshiriladi','Dasta ekran yoki zatvor bilan to‘siladi','Xona qorong‘ilatiladi','Hech narsa'],1],
+   ['Lazer xonasi nima uchun yaxshi yoritilgan bo‘lishi kerak?',['Yorug‘da ko‘z qorachig‘i torayadi, ko‘zga kiradigan energiya kamayadi','Dasta yaxshi ko‘rinadi','Lazer barqaror ishlaydi','Interferensiya yaxshilanadi'],0],
+   ['He–Ne lazerining ta’minlash blokidagi asosiy xavf nima?',['Rentgen nurlanishi','Bir necha kilovolt yuqori kuchlanish','Zaharli gaz','Kuchli magnit maydon'],1],
+   ['Ko‘rinmaydigan IQ lazer nurining alohida xavfi nimada?',['U terini kuydirmaydi','U ko‘zni yumish refleksini uyg‘otmaydi — odam nur tushayotganini sezmaydi','U faqat metallga ta’sir qiladi','Xavfi yo‘q'],1],
+   ['Ko‘zga lazer nuri tushganda birinchi navbatda nima qilinadi?',['Ko‘zni ishqalash','Ko‘zni sovuq suv bilan yuvib, ishni davom ettirish','Qurilmani o‘chirish, o‘qituvchiga xabar berish va oftalmologga murojaat qilish','Himoya ko‘zoynagini taqish'],2]];
+  const form=el('div',{class:'quiz'}),score=el('p',{class:'res'});
+  Q.forEach((q,i)=>form.append(el('fieldset',null,el('legend',null,`${i+1}. ${q[0]}`),q[1].map((a,j)=>el('label',null,el('input',{type:'radio',name:'q'+i,value:j}),' '+a)))));
+  main.append(...section('Xavfsizlik bo‘yicha test',form,el('div',{class:'btns'},button('Testni tekshirish',()=>{let n=0;Q.forEach((q,i)=>{const fs=form.children[i],sel=fs.querySelector('input:checked');
+      [...fs.querySelectorAll('label')].forEach((l,j)=>l.className=j===q[2]?'right':(sel&&+sel.value===j?'wrong':''));if(sel&&+sel.value===q[2])n++});
+    score.className='res '+(n>=8?'ok':'bad');score.textContent=`Natija: ${n} / ${Q.length}. `+(n>=8?'Siz laboratoriya ishlariga qo‘yilasiz.':'Qoidalarni qayta o‘qib, testni takrorlang (kamida 8 ta to‘g‘ri javob kerak).')}),score)));
+  upd();onResize(upd)}});
+
+/* ================= 2-ish: He–Ne lazeri ================= */
+LABS.push({id:2,short:'He–Ne lazeri',kind:'qutblanish, quvvat, modlar',title:'Geliy-neon lazerining tuzilishi va ishlash prinsipini o‘rganish',
+goal:'Malyus qonunini tekshirib, lazer nurining qutblanish darajasini aniqlang; chiqish quvvatining razryad tokiga bog‘lanishini o‘lchang; rezonator uzunligi bo‘ylama modlar soniga qanday ta’sir qilishini kuzating.',
+build(main){tabs([
+ {name:'Qutblanish (Malyus qonuni)',build(host){
+   const p=V(2,'pol',.955,.995),phi0=Math.round(V(2,'phi0',5,175)),bg=V(2,'bg',.4,1.6),i0=V(2,'i0',180,320);
+   const cur=a=>bg+i0*(p*Math.cos((a-phi0)*Math.PI/180)**2+(1-p)/2);
+   const cv=el('canvas'),out=lcd('Fototok i','µA'),pc=el('canvas');let shut=false;
+   const ang=slider({label:'Analizator burchagi φ',min:0,max:360,step:1,value:0,unit:'°',nudges:[1,10],nudgeLabel:k=>k,oninput:draw});
+   const sh=check('Lazer nurini to‘sish (fon tokini o‘lchash)',false,v=>{shut=v;draw()});
+   const J=journal([{h:'φ, °',d:0},{h:'i, µA',d:2},{h:'i − i_f, µA',edit:true},{h:'cos²(φ − φ₀)',edit:true}]);
+   function read(){return noisy(shut?bg:cur(ang.get()),.004,.03)}
+   function draw(){const a=ang.get(),{g,w,h}=fit(cv,200),T=shut?0:cur(a)/(bg+i0);g.clearRect(0,0,w,h);gRail(g,w,160);
+     gBox(g,24,82,120,40);gLabel(g,'He–Ne lazer',84,107,'center','#dfe8ef');
+     const xa=w*.55,xd=w-90;if(!shut){gBeam(g,144,102,xa,102,632.8,.9);gBeam(g,xa,102,xd,102,632.8,T*.9)}else{gBeam(g,144,102,190,102,632.8,.9);g.fillStyle='#52677a';g.fillRect(190,72,6,60)}
+     g.save();g.translate(xa,102);g.strokeStyle='#9fb3c4';g.lineWidth=2;g.beginPath();g.ellipse(0,0,16,44,0,0,7);g.stroke();g.rotate(-a*Math.PI/180);g.strokeStyle='#f0c040';g.beginPath();g.moveTo(0,-40);g.lineTo(0,40);g.stroke();g.restore();
+     gLabel(g,'analizator, φ = '+a+'°',xa,40);gBox(g,xd,80,56,44,'#3a3320','#8a7a3a');gLabel(g,'fotodiod',xd+28,142);out.set(read(),2);
+     plot(pc,{series:[{pts:J.rows.map(r=>[r[0],r[1]]),color:'#c0182b'}],xlabel:'φ, °',ylabel:'i, µA',xmin:0,xmax:360,ymin:0})}
+   J.onchange=draw;
+   host.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Sariq chiziq — analizatorning o‘tkazish tekisligi. Shkala noli lazerning qutblanish tekisligi bilan mos kelmasligi mumkin.')),el('div',{class:'side'},out.root,el('div',{class:'card'},ang.root,sh.root,el('div',{class:'btns'},button('Jadvalga yozish',()=>J.add([ang.get(),read(),'',''])))))),
+     ...section('Bajarish tartibi',steps(['Lazer nurini to‘sib, fon toki <span class="f">i_f</span> ni yozib oling, so‘ng to‘siqni oching.','Analizatorni burab, fototok maksimal bo‘ladigan burchak <span class="f">φ₀</span> ni toping.','φ ni 0° dan 360° gacha 10° qadam bilan o‘zgartirib, har bir holatda “Jadvalga yozish”ni bosing.','<span class="f">i − i_f</span> va <span class="f">cos²(φ − φ₀)</span> ustunlarini o‘zingiz hisoblab to‘ldiring; ularning bog‘lanishi to‘g‘ri chiziq bo‘lishi kerak.','Qutblanish darajasini hisoblang: <span class="f">P = (i_max − i_min) / (i_max + i_min − 2·i_f)</span>.'])),
+     ...section('O‘lchash jurnali',J.root),...section('Grafik i(φ)',el('div',{class:'card'},pc)),
+     ...section('Natijani tekshirish',verify([{label:'Qutblanish darajasi P',unit:'0…1',truth:()=>p,abs:.012},{label:'Maksimumga mos burchak φ₀',unit:'°',truth:()=>phi0,abs:3}])));
+   draw();onResize(draw)}},
+ {name:'Razryad toki va quvvat',build(host){
+   const Ib=3.2,Iopt=V(2,'iopt',5.8,8.2),Pm=V(2,'pmax',1.4,4.2);
+   const Pw=I=>I<=Ib?0:Pm*((I-Ib)/(Iopt-Ib))*Math.exp(1-(I-Ib)/(Iopt-Ib)),U=I=>2350-95*I+3.2*I*I;
+   const cv=el('canvas'),pc=el('canvas'),lp=lcd('Chiqish quvvati P','mW'),lu=lcd('Trubkadagi kuchlanish U','V');
+   const I=slider({label:'Razryad toki I',min:2.5,max:12,step:.1,value:4,unit:'mA',nudges:[.1,.5],nudgeLabel:k=>fmt(k,1),oninput:draw});
+   const J=journal([{h:'I, mA',d:1},{h:'U, V',d:0},{h:'P, mW',d:3},{h:'η = P/(UI), %',edit:true}]);
+   const rd=()=>({i:I.get(),u:noisy(U(I.get()),.002),p:Math.max(0,noisy(Pw(I.get()),.006,.002))});
+   function draw(){const r=rd(),{g,w,h}=fit(cv,190);g.clearRect(0,0,w,h);gRail(g,w,156);
+     const x0=50,x1=w-150,glow=Math.min(1,I.get()/12);g.fillStyle=`rgba(255,120,110,${.12+.35*glow})`;g.beginPath();g.roundRect(x0,74,x1-x0,44,20);g.fill();g.strokeStyle='#6f8597';g.lineWidth=1.5;g.stroke();
+     g.fillStyle=`rgba(255,160,140,${.3+.6*glow})`;g.fillRect(x0+24,92,x1-x0-48,8);gLabel(g,'razryad trubkasi (He + Ne)',(x0+x1)/2,62);
+     g.fillStyle='#8fa5b7';g.fillRect(x0-16,70,5,52);g.fillRect(x1+11,70,5,52);gLabel(g,'R≈100 %',x0-14,140);gLabel(g,'R≈99 %',x1+14,140);
+     gBeam(g,x0-11,96,x1+11,96,632.8,Pw(I.get())/Pm*.5,2);gBeam(g,x1+16,96,w-70,96,632.8,Pw(I.get())/Pm,3);gBox(g,w-70,76,50,40,'#3a3320','#8a7a3a');gLabel(g,'quvvat o‘lchagich',w-50,140);
+     lp.set(r.p,3);lu.set(r.u,0);plot(pc,{series:[{pts:J.rows.map(r=>[r[0],r[2]]),color:'#c0182b',line:J.rows.length>2}],xlabel:'I, mA',ylabel:'P, mW',ymin:0})}
+   J.onchange=draw;
+   host.append(el('div',{class:'rig'},el('div',{class:'bench'},cv),el('div',{class:'side'},lp.root,lu.root,el('div',{class:'card'},I.root,el('div',{class:'btns'},button('Jadvalga yozish',()=>{const r=rd();J.add([r.i,r.u,r.p,''])}))))),
+     ...section('Bajarish tartibi',steps(['Tokni 2,5 mA dan boshlab 0,5 mA qadam bilan oshiring; generatsiya boshlanadigan bo‘sag‘aviy tokni aniqlang.','Har bir tokda I, U va P ni jurnalga yozing. Maksimum atrofida qadamni 0,1–0,2 mA gacha kichraytiring.','P(I) grafigidan optimal tok <span class="f">I_opt</span> va <span class="f">P_max</span> ni toping.','Har bir nuqta uchun FIK ni hisoblang: <span class="f">η = P / (U·I)</span>. Birliklarga e’tibor bering (mW, V, mA).','Nima uchun katta toklarda quvvat kamayadi? Javobni hisobotga yozing.'])),
+     ...section('O‘lchash jurnali',J.root),...section('Grafik P(I)',el('div',{class:'card'},pc)),
+     ...section('Natijani tekshirish',verify([{label:'Optimal tok I_opt',unit:'mA',truth:()=>Iopt,abs:.35},{label:'Maksimal FIK η',unit:'%',truth:()=>{let m=0;for(let i=3;i<12;i+=.02)m=Math.max(m,Pw(i)/(U(i)*i)*100);return m},tol:.07}])));
+   draw();onResize(draw)}},
+ {name:'Rezonator modlari',build(host){
+   const cv=el('canvas'),n=lcd('Bo‘sag‘adan yuqoridagi modlar soni','ta');
+   const L=slider({label:'Rezonator uzunligi L',min:10,max:100,step:1,value:30,unit:'sm',oninput:draw}),off=slider({label:'Rezonatorning issiqlikdan uzayishi (λ ulushlarida)',min:0,max:.5,step:.01,value:0,oninput:draw}),th=slider({label:'Yo‘qotishlar sathi (kuchaytirish maksimumiga nisbatan)',min:.2,max:.95,step:.01,value:.5,oninput:draw});
+   function draw(){const{g,w,h}=fit(cv,280),dv=C/(2*L.get()/100)/1e6,F=1500,span=3600,X=f=>w/2+f/span*(w-40),Y=v=>h-40-v*(h-80);g.clearRect(0,0,w,h);
+     g.strokeStyle='#31414e';g.beginPath();g.moveTo(20,Y(0));g.lineTo(w-20,Y(0));g.stroke();
+     for(let f=-1500;f<=1500;f+=500){gLabel(g,(f>0?'+':'')+f,X(f),h-20);g.fillStyle='#31414e';g.fillRect(X(f),Y(0),1,5)}gLabel(g,'ν − ν₀, MHz (ν₀ — 632,8 nm chizig‘ining markazi)',w/2,h-4);
+     const G=f=>Math.exp(-4*Math.LN2*f*f/(F*F));g.strokeStyle='#f0c040';g.lineWidth=2;g.beginPath();for(let f=-span/2;f<=span/2;f+=20)f===-span/2?g.moveTo(X(f),Y(G(f))):g.lineTo(X(f),Y(G(f)));g.stroke();
+     g.setLineDash([6,5]);g.strokeStyle='#ff6b5a';g.beginPath();g.moveTo(20,Y(th.get()));g.lineTo(w-20,Y(th.get()));g.stroke();g.setLineDash([]);gLabel(g,'yo‘qotishlar sathi (generatsiya bo‘sag‘asi)',w-24,Y(th.get())-6,'right','#ff6b5a');gLabel(g,'kuchaytirish konturi (Dopler kengayishi)',26,Y(1)-8,'left','#f0c040');
+     let cnt=0;const sh=off.get()*2*dv;for(let k=-60;k<=60;k++){const f=k*dv+sh%dv;if(Math.abs(f)>span/2)continue;const on=G(f)>th.get();if(on)cnt++;
+       g.strokeStyle=on?nm2rgb(632.8,1):'#4a5d6c';g.lineWidth=on?3:1;g.beginPath();g.moveTo(X(f),Y(0));g.lineTo(X(f),Y(on?G(f):.12));g.stroke()}n.set(String(cnt))}
+   host.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Qizil chiziqlar — generatsiyada qatnashayotgan bo‘ylama modlar; kulrang chiziqlar — bo‘sag‘adan pastda qolgan modlar.')),el('div',{class:'side'},n.root,el('div',{class:'card'},L.root,th.root,off.root))),
+     ...section('Bajarish tartibi',steps(['L = 30 sm uchun chastota o‘qidan qo‘shni modlar orasidagi masofani o‘lchang va <span class="f">Δν = c / 2L</span> bilan taqqoslang.','L ni 15, 30, 60, 100 sm qilib, generatsiyadagi modlar sonini yozing. Nazariy baho: <span class="f">N ≈ Δν_D / Δν</span>.','Qanday uzunlikda lazer bir chastotali (bitta modli) bo‘ladi? Bunday lazerning quvvati nima uchun kichik?','“Issiqlikdan uzayish” surgichini sekin suring: modlar kontur bo‘ylab siljiydi, modlar soni o‘zgaradi. Shu hodisa lazer yoqilgandan keyingi quvvat tebranishlarini tushuntiradi.'])),
+     theory('Qisqacha nazariya','<p>Uzunligi L bo‘lgan rezonatorda faqat <span class="f">L = q·λ/2</span> shartni qanoatlantiruvchi tebranishlar turg‘un. Qo‘shni bo‘ylama modlar oralig‘i <span class="f">Δν = c/2L</span>. Neon chizig‘ining Dopler kengligi ≈ 1500 MHz, shuning uchun generatsiyada bir vaqtda bir necha mod qatnashadi.</p>'));
+   draw();onResize(draw)}}],main)}});
+
+/* ================= 3-ish: Maykelson interferometri ================= */
+LABS.push({id:3,short:'Maykelson interferometri',kind:'to‘lqin uzunligi',title:'Maykelson interferometri yordamida geliy-neon lazerining to‘lqin uzunligini aniqlash',
+goal:'Harakatlanuvchi ko‘zguni mikrometrik vint bilan siljitib, markazdan o‘tgan interferension halqalarni sanang va He–Ne lazerining to‘lqin uzunligini hisoblang.',
+build(main){const lam=632.8e-9,BACK=.004;
+  let unknown=false;const kU=+V(3,'k',.08,.24).toFixed(3),lc=V(3,'lc',.17,.26);
+  const k=()=>unknown?kU:.1;
+  let x=5+Math.round(V(3,'x0',0,400))/100,dEff=0,dir=0,slack=0,count=0,armed=false,imax=0,imin=1e9,run=0;
+  const cv=el('canvas'),sc=el('canvas',{width:240,height:240,style:'width:100%;max-width:300px;margin:0 auto;image-rendering:auto'});
+  const lx=lcd('Mikrometr ko‘rsatishi x','mm'),ln=lcd('Halqa hisoblagich N',''),li=lcd('Markazdagi fototok','µA'),lmm=lcd('i_max / i_min (xotira)','µA');
+  const speed=slider({label:'Vintni burash tezligi',min:.002,max:.05,step:.001,value:.012,unit:'mm/s'});
+  const arm=slider({label:'Yelkalar farqi l₂ − l₁ (qo‘pol sozlash)',min:0,max:12,step:.5,value:0,unit:'sm',oninput:()=>{imax=0;imin=1e9}});
+  const tilt=slider({label:'K₁ ko‘zguning og‘ishi',min:-1.5,max:1.5,step:.05,value:.6,unit:'mrad'});
+  const lens=check('Kengaytiruvchi linza o‘rnatilgan',true);
+  const J=journal([{h:'N',d:0},{h:'x, mm',d:3},{h:'Δx, mm',edit:true},{h:'λ, nm',edit:true}]);
+  const vis=()=>Math.exp(-Math.pow(2*arm.get()/100/lc,2));
+  function move(dx){const s=Math.sign(dx);if(s!==dir){dir=s;slack=BACK}let m=Math.abs(dx);x=Math.min(25,Math.max(0,x+dx));
+    if(slack>0){const t=Math.min(slack,m);slack-=t;m-=t}dEff+=s*m*k()*1e-3}
+  function center(){return .5*(1+vis()*Math.cos(4*Math.PI*(3e-3+dEff)/lam))}
+  const img=sc.getContext('2d'),id=img.createImageData(240,240);
+  function frame(dt){if(run){const st=run*speed.get()*dt,n=Math.ceil(Math.abs(st)/.0002);for(let i=0;i<n;i++){move(st/n);tickCount()}}
+    const d=3e-3+dEff,Vv=vis(),tl=tilt.get()*1e-3,hasLens=lens.get();
+    for(let py=0;py<240;py++)for(let px=0;px<240;px++){const ux=(px-120)/120,uy=(py-120)/120,r2=ux*ux+uy*uy,o=(py*240+px)*4;let v=0;
+      if(hasLens){const th2=r2*9e-4,ph=4*Math.PI/lam*(d*(1-th2/2)+tl*ux*.004);v=.5*(1+Vv*Math.cos(ph))*Math.exp(-r2*1.6)}
+      else{const s=Math.exp(-r2*90)+Math.exp(-((ux-tl*260)**2+uy*uy)*90);v=Math.min(1,s)}
+      id.data[o]=255*Math.pow(v,.8);id.data[o+1]=30*v;id.data[o+2]=20*v;id.data[o+3]=255}
+    img.putImageData(id,0,0);img.strokeStyle='rgba(255,255,255,.55)';img.beginPath();img.moveTo(112,120);img.lineTo(128,120);img.moveTo(120,112);img.lineTo(120,128);img.stroke();
+    const c=center(),ic=42*c+.3;imax=Math.max(imax,ic);imin=Math.min(imin,ic);lx.set(x,3);ln.set(String(count));li.set(noisy(ic,.004),2);lmm.set(fmt(imax,1)+' / '+fmt(imin,1));bench()}
+  function tickCount(){const c=center(),Vv=vis();if(Vv<.08)return;const hi=.5+.3*Vv,lo=.5-.3*Vv;if(c<lo)armed=true;if(armed&&c>hi){armed=false;count++}}
+  function bench(){const{g,w,h}=fit(cv,250);g.clearRect(0,0,w,h);const bx=w*.5,by=150;
+    gBox(g,20,by-18,100,36);gLabel(g,'He–Ne lazer',70,by+4,'center','#dfe8ef');gBeam(g,120,by,bx,by,632.8,.9,2.5);
+    if(lens.get()){g.strokeStyle='#9fd0ff';g.lineWidth=2;g.beginPath();g.ellipse(150,by,5,16,0,0,7);g.stroke();gLabel(g,'linza',150,by+34)}
+    g.save();g.translate(bx,by);g.rotate(-Math.PI/4);g.fillStyle='rgba(159,208,255,.5)';g.fillRect(-26,-3,52,6);g.restore();gLabel(g,'nurbo‘lgich',bx+8,by+40,'left');
+    gBeam(g,bx,by,bx,38,632.8,.6,2.5);g.fillStyle='#8fa5b7';g.fillRect(bx-24,30,48,7);gLabel(g,'K₁ (qo‘zg‘almas)',bx,22);
+    const mx=w-90-arm.get()*-3+Math.min(30,dEff*2e5);gBeam(g,bx,by,mx,by,632.8,.6,2.5);g.fillStyle='#8fa5b7';g.fillRect(mx,by-24,7,48);gLabel(g,'K₂ (harakatlanuvchi)',mx-4,by-32,'right');
+    gBox(g,mx+12,by-9,52,18,'#2b3a47');gLabel(g,'mikrometr',mx+38,by+26);gBeam(g,bx,by,bx,h-22,632.8,.7,2.5);g.fillStyle='#dfe8ef';g.fillRect(bx-40,h-20,80,4);gLabel(g,'ekran',bx+50,h-12,'left')}
+  const hold=(t,s)=>{const b=button(t,null,'ghost');const on=e=>{e.preventDefault();run=s},offf=()=>run=0;b.addEventListener('pointerdown',on);['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,offf));return b};
+  const mode=select({label:'Qurilma',options:[['0','Asosiy qurilma: uzatish koeffitsiyenti k = 1/10 (pasportda)'],['1','2-qurilma: k noma’lum (darajalash topshirig‘i)']],onchange:v=>{unknown=v==='1';count=0;dEff=0}});
+  main.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{style:'display:grid;place-items:center;padding:8px'},sc),el('div',{class:'cap'},'Pastda — ekrandagi interferension manzara. Oq belgi — sanash nuqtasi (fotodetektor shu yerda turadi).')),
+     el('div',{class:'side'},lx.root,ln.root,li.root,lmm.root)),
+    el('div',{class:'card',style:'margin-top:14px'},el('div',{class:'cols'},mode.root,speed.root,arm.root,tilt.root),lens.root,
+      el('div',{class:'btns'},hold('◀ Vintni chapga burash (bosib turing)',-1),hold('Vintni o‘ngga burash (bosib turing) ▶',1),button('−0,001 mm',()=>{move(-.001);tickCount()},'ghost'),button('+0,001 mm',()=>{move(.001);tickCount()},'ghost')),
+      el('div',{class:'btns'},button('Hisoblagichni nollash',()=>{count=0;armed=false},'ghost'),button('i_max / i_min xotirasini tozalash',()=>{imax=0;imin=1e9},'ghost'),button('Jadvalga yozish',()=>J.add([count,+x.toFixed(3),'',''])))),
+    el('div',{class:'note'},'Mikrometrik vintda lyuft bor: burash yo‘nalishi o‘zgartirilganda dastlabki ≈0,004 mm da ko‘zgu siljimaydi. Shuning uchun o‘lchash davomida vintni faqat bir yo‘nalishda burang.'),
+    ...section('Bajarish tartibi',steps(['Linzani olib qo‘ying: ekranda ikki dog‘ ko‘rinadi. “K₁ ko‘zguning og‘ishi” surgichi bilan ularni ustma-ust tushiring (og‘ish = 0), so‘ng linzani qayta o‘rnating — konsentrik halqalar hosil bo‘ladi.','Vintni o‘ngga bir oz burab lyuftni yo‘qoting, hisoblagichni nollang va boshlang‘ich sanoq <span class="f">x₀</span> ni jurnalga yozing (N = 0).','Vintni o‘sha yo‘nalishda burab, N = 20, 40, 60, 80, 100 bo‘lganda to‘xtab, jurnalga yozing. Halqalarni ko‘z bilan ham sanab, hisoblagichni tekshirib ko‘ring.','Har bir satr uchun <span class="f">Δx = x − x₀</span> va <span class="f">λ = 2·k·Δx / N</span> ni hisoblang. Δx(N) grafigining qiyaligidan λ ni aniqroq toping.','Darajalash: 2-qurilmani tanlang va λ = 632,8 nm ni ma’lum deb, <span class="f">k = N·λ / (2·Δx)</span> ni aniqlang.','Ko‘rinuvchanlik: yelkalar farqini 0, 2, 4 … 12 sm qilib, har safar vintni sekin burab i_max va i_min ni oling; <span class="f">V = (i_max − i_min)/(i_max + i_min)</span>. V(Δ) grafigidan kogerentlik uzunligini baholang (Δ = 2(l₂ − l₁)).'])),
+    ...section('O‘lchash jurnali',J.root),
+    ...section('Natijani tekshirish',verify([{label:'To‘lqin uzunligi λ',unit:'nm',truth:()=>632.8,tol:.02},{label:'2-qurilmaning koeffitsiyenti k',unit:'masalan 0,125',truth:()=>kU,tol:.03}])),
+    theory('Qisqacha nazariya','<p>Ko‘zgu Δd ga siljiganda yo‘l farqi 2Δd ga o‘zgaradi; yo‘l farqi har λ ga o‘zgarganda markazda bitta halqa paydo bo‘ladi yoki yo‘qoladi: <span class="f">2Δd = Nλ</span>. Mikrometr ko‘zguni kamaytiruvchi richag orqali siljitadi: <span class="f">Δd = k·Δx</span>. Yo‘l farqi kogerentlik uzunligidan ortganda halqalarning kontrasti pasayadi.</p>'));
+  loop(frame)}});
+/* ================= 4-ish: optik quvvat ================= */
+LABS.push({id:4,short:'Optik quvvat',kind:'mW, dBm, filtrlar, plastinka',title:'Geliy-neon lazerining optik quvvatini aniqlash',
+goal:'He–Ne lazerining chiqish quvvatini mW va dBm birliklarida o‘lchang, yorug‘lik filtrlarining optik zichligini hamda shisha plastinkadagi interferension yo‘qotishlarni aniqlang.',
+build(main){const lam=632.8e-9,Pn=V(4,'p',2.2,4.8),Iopt=V(4,'iopt',6,7.6),Ib=3.2;
+  const Dn=[.3,.6,1].map((d,i)=>d+V(4,'d'+i,-.04,.04));
+  const thick=[...Array(8)].map((_,i)=>1e-3+V(4,'t'+i,0,1)*2e-6),R1=.04;
+  const Tpl=i=>{const dl=2*Math.PI*1.5*thick[i]/lam;return(1-R1)**2/((1-R1)**2+4*R1*Math.sin(dl)**2)};
+  let on=false,t=0,dbm=false;
+  const cv=el('canvas'),pc=el('canvas'),lp=lcd('Optik quvvat o‘lchagich','mW'),lt=lcd('Lazer yoqilganidan beri (tezlashtirilgan vaqt)','daq'),lu=lcd('Razryad toki / kuchlanish','');
+  const I=slider({label:'Razryad toki',min:3,max:10,step:.1,value:+Iopt.toFixed(1),unit:'mA'});
+  const f=[0,1,2].map(i=>check(`Filtr №${i+1}`,false)),pl=check('Shisha plastinka',false),pos=slider({label:'Plastinkadagi doiracha raqami',min:1,max:8,step:1,value:1});
+  const J=journal([{h:'t, daq',d:1},{h:'Yo‘ldagi elementlar'},{h:'P, mW',d:4},{h:'P, dBm',d:3},{h:'Yo‘qotish, dB',edit:true},{h:'T',edit:true}]);
+  const Plaser=()=>{const i=I.get();if(!on||i<=Ib)return 0;const base=Pn*((i-Ib)/(Iopt-Ib))*Math.exp(1-(i-Ib)/(Iopt-Ib));return base*(1-.35*Math.exp(-t/4)+.06*Math.exp(-t/9)*Math.sin(t*2.1))};
+  const Tall=()=>f.reduce((a,c,i)=>a*(c.get()?Math.pow(10,-Dn[i]):1),1)*(pl.get()?Tpl(pos.get()-1):1);
+  const what=()=>[...f.map((c,i)=>c.get()?'F'+(i+1):null),pl.get()?'plastinka-'+pos.get():null].filter(Boolean).join(' + ')||'bo‘sh';
+  const read=()=>Math.max(0,noisy(Plaser()*Tall(),.003,.0004));
+  function frame(dt){if(on)t+=dt;const p=read(),{g,w,h}=fit(cv,200);g.clearRect(0,0,w,h);gRail(g,w,160);
+    gBox(g,20,80,120,44,on?'#3a2b2e':'#2b3a47');gLabel(g,'He–Ne lazer',80,107,'center','#dfe8ef');let a=on?Math.min(1,Plaser()/Pn):0,x=140;const xe=w-84;
+    const slots=[...f.map((c,i)=>c.get()?['F'+(i+1),'#56606b']:null),pl.get()?['plastinka','rgba(159,208,255,.45)']:null].filter(Boolean);
+    slots.forEach((s,i)=>{const xs=190+i*(xe-230)/Math.max(1,slots.length);gBeam(g,x,102,xs,102,632.8,a);x=xs;if(s[0][0]==='F')a*=Math.pow(10,-Dn[+s[0][1]-1]);else a*=Tpl(pos.get()-1);g.fillStyle=s[1];g.fillRect(xs-4,64,8,76);gLabel(g,s[0],xs,54)});
+    gBeam(g,x,102,xe,102,632.8,a);gBox(g,xe,78,64,48,'#3a3320','#8a7a3a');gLabel(g,'o‘lchagich',xe+32,146);
+    lp.off(!on);lp.unit(dbm?'dBm':'mW');lp.set(!on?'— — —':dbm?(p>1e-6?fmt(10*Math.log10(p),3):'past'):fmt(p,4));lt.set(t,1);lu.set(on?fmt(I.get(),1)+' mA / '+fmt(2350-95*I.get()+3.2*I.get()**2,0)+' V':'o‘chirilgan')}
+  J.onchange=()=>plot(pc,{series:[{pts:J.rows.map(r=>[r[0],r[2]]),color:'#c0182b'}],xlabel:'t, daq',ylabel:'P, mW',ymin:0});
+  main.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Simulyatorda vaqt tezlashtirilgan: 1 sekund = 1 daqiqa. Lazer yoqilgandan so‘ng quvvat taxminan 15–20 daqiqada barqarorlashadi.')),el('div',{class:'side'},lp.root,lt.root,lu.root)),
+    el('div',{class:'card',style:'margin-top:14px'},el('div',{class:'btns',style:'margin:0 0 12px'},button('Lazerni yoqish / o‘chirish',()=>{on=!on;t=0}),button('mW ↔ dBm',()=>dbm=!dbm,'ghost'),button('Jadvalga yozish',()=>{const p=read();J.add([+t.toFixed(1),what(),p,p>0?10*Math.log10(p):NaN,'',''])})),
+      el('div',{class:'cols'},I.root,el('div',null,f.map(c=>c.root),pl.root),pos.root)),
+    ...section('Bajarish tartibi',steps(['Lazerni yoqing va har 2 daqiqada (2 sekundda) quvvatni jurnalga yozib, P(t) grafigidan barqarorlashish vaqtini aniqlang. Keyingi o‘lchashlarni faqat barqaror rejimda bajaring.','Yo‘l bo‘sh holatda <span class="f">P₀</span> ni mW va dBm da yozing; <span class="f">P[dBm] = 10·lg(P / 1 mW)</span> formulasi bilan tekshiring.','Filtrlarni navbat bilan qo‘yib, har biri uchun <span class="f">T = P/P₀</span>, yo‘qotish <span class="f">10·lg(P₀/P)</span> dB va optik zichlik <span class="f">D = lg(1/T)</span> ni hisoblang. Ikki filtr birga qo‘yilganda D lar qo‘shilishini tekshiring.','Shisha plastinkani qo‘yib, 1–8-doirachalar uchun yo‘qotishni dB da o‘lchang. Natijalar nazariy oraliq <span class="f">0 … 0,696 dB</span> da yotadimi? O‘rtacha yo‘qotishni 0,348 dB bilan taqqoslang.','Razryad tokini o‘zgartirib, quvvat maksimal bo‘ladigan tokni toping.','P₀ bo‘yicha bir sekundda chiqadigan fotonlar sonini hisoblang: <span class="f">n = P·λ / (h·c)</span>.'])),
+    ...section('O‘lchash jurnali',J.root),...section('Grafik P(t)',el('div',{class:'card'},pc)),
+    ...section('Natijani tekshirish',verify([{label:'№2 filtrning optik zichligi D',unit:'',truth:()=>Dn[1],abs:.015},{label:'Plastinkadagi o‘rtacha yo‘qotish (8 nuqta)',unit:'dB',truth:()=>thick.reduce((a,_,i)=>a-10*Math.log10(Tpl(i)),0)/8,abs:.03},{label:'Barqaror rejimdagi quvvat P₀ (optimal tokda)',unit:'mW',truth:()=>Pn,tol:.03}])),
+    theory('Qisqacha nazariya','<p>Havo–shisha chegarasidan qaytish koeffitsiyenti <span class="f">R₁ = ((n−1)/(n+1))² = 0,04</span>. Plastinkaning ikki sirtidan qaytgan kogerent to‘lqinlar interferensiyalashadi, shuning uchun o‘tkazish koeffitsiyenti qalinlikka bog‘liq (Eyri formulasi): <span class="f">T = (1−R₁)² / ((1−R₁)² + 4R₁·sin²δ)</span>, <span class="f">δ = 2πnd/λ</span>. Qalinlik atigi λ/4n ≈ 0,11 µm ga o‘zgarsa, T maksimumdan minimumga o‘tadi — plastinkaning turli nuqtalarida yo‘qotish har xil.</p>'));
+  J.onchange();loop(frame)}});
+
+/* ================= 5-ish: yarimo‘tkazgichli lazer ================= */
+LABS.push({id:5,short:'Yarimo‘tkazgichli lazer',kind:'bo‘sag‘aviy tok, FIK',title:'Yarimo‘tkazgichli lazerning ishlash prinsipini o‘rganish',
+goal:'Lazer diodining volt-amper va vatt-amper xarakteristikalarini o‘lchang, bo‘sag‘aviy tok, differensial kvant samaradorligi va xarakteristik haroratni aniqlang; nurlanishning qutblanishi va yoyilish burchaklarini tadqiq eting.',
+build(main){const Ith20=V(5,'ith',18,30),T0=V(5,'t0',105,155),S=V(5,'s',.62,.92),lam=Math.round(V(6,'ld',636,672)),thP=V(5,'tp',27,38),thL=V(5,'tl',8,12.5),IMAX=60;
+  let dead=false;const ith=T=>Ith20*Math.exp((T-20)/T0);
+  const cv=el('canvas'),pc=el('canvas'),lP=lcd('Nurlanish quvvati P','mW'),lU=lcd('Dioddagi kuchlanish U','V'),lab=lcd('Ekrandagi dog‘ o‘qlari a × b','mm');
+  const I=slider({label:'Damlash toki I',min:0,max:75,step:.5,value:0,unit:'mA',nudges:[.5,5],nudgeLabel:k=>fmt(k,1),oninput:draw});
+  const T=select({label:'Korpus harorati',options:[['20','20 °C'],['35','35 °C'],['50','50 °C']],onchange:draw});
+  const polOn=check('Detektor oldiga polyarizator qo‘yish',false,draw),pa=slider({label:'Polyarizator burchagi',min:0,max:180,step:5,value:0,unit:'°',oninput:draw});
+  const Ls=slider({label:'Ekrangacha masofa L (linzasiz)',min:30,max:150,step:5,value:60,unit:'mm',oninput:draw});
+  const J=journal([{h:'T, °C',d:0},{h:'I, mA',d:1},{h:'U, V',d:3},{h:'P, mW',d:3},{h:'Izoh'}]);
+  function P0(){const i=I.get(),t=+T.get(),it=ith(t);if(dead)return 0;return i<it?.0025*i:.0025*it+S*(1-.0022*(t-20))*(i-it)}
+  function read(){const i=I.get(),it=ith(+T.get());let p=P0();if(polOn.get()){const pol=.08+.89/(1+Math.exp(-(i-it)*1.4));p*=pol*Math.cos(pa.get()*Math.PI/180)**2+(1-pol)/2}
+    return{p:Math.max(0,noisy(p,.005,.0006)),u:dead?0:noisy(i<=0?0:1.62+.05*Math.log(1+i/.02)+.0042*i,.001)}}
+  function draw(){if(I.get()>IMAX+5&&!dead){dead=true}
+    const r=read(),{g,w,h}=fit(cv,230);g.clearRect(0,0,w,h);gRail(g,w,200);const a=Math.min(1,P0()/25),above=I.get()>ith(+T.get());
+    gBox(g,30,96,70,40,'#3b3f46');gLabel(g,'lazer diodi',65,152);const xe=w*.56;
+    if(!dead&&I.get()>0){g.fillStyle=nm2rgb(lam,above?.10+.5*a:.05);g.beginPath();g.moveTo(100,116);g.lineTo(xe,116-60);g.lineTo(xe,116+60);g.fill()}
+    gBox(g,xe,50,12,132,'#3a3320','#8a7a3a');gLabel(g,'detektor',xe+6,40);if(polOn.get()){g.fillStyle='rgba(240,192,64,.5)';g.fillRect(xe-30,56,5,120);gLabel(g,'polyarizator',xe-28,196)}
+    /* ekran */const sx=w-150,sy=36,sz=130;g.fillStyle='#0a0f13';g.fillRect(sx,sy,sz,sz);g.strokeStyle='#22303b';for(let k=0;k<=13;k++){g.beginPath();g.moveTo(sx+k*10,sy);g.lineTo(sx+k*10,sy+sz);g.moveTo(sx,sy+k*10);g.lineTo(sx+sz,sy+k*10);g.stroke()}
+    const A=2*Ls.get()*Math.tan(thP*Math.PI/360),B=2*Ls.get()*Math.tan(thL*Math.PI/360),sc=sz/130;
+    if(P0()>0){g.fillStyle=nm2rgb(lam,above?.75:.18);g.beginPath();g.ellipse(sx+sz/2,sy+sz/2,B/2*sc,A/2*sc,0,0,7);g.fill()}gLabel(g,'ekran (katak 10 mm)',sx+sz/2,sy+sz+16);
+    lP.set(r.p,3);lU.set(r.u,3);lab.set(P0()>0?fmt(noisy(A,0,.3),1)+' × '+fmt(noisy(B,0,.3),1):'—');
+    note.hidden=!dead;const col={'20':'#c0182b','35':'#c77a0a','50':'#1f6fb5'};
+    plot(pc,{series:['20','35','50'].map(t=>({pts:J.rows.filter(r=>String(r[0])===t&&!r[4]).map(r=>[r[1],r[3]]),color:col[t]})),xlabel:'I, mA',ylabel:'P, mW',ymin:0})}
+  const note=el('div',{class:'note',hidden:true},'Diod ishdan chiqdi: tok pasportdagi chegaradan oshirib yuborildi va kristallning ko‘zgu yoqlari shikastlandi. Real laboratoriyada bu qaytarib bo‘lmaydigan nosozlik. ',button('Yangi diod o‘rnatish',()=>{dead=false;I.set(0);draw()},'danger'));
+  J.onchange=draw;
+  main.append(el('p',{class:'pass'},el('b',null,'Diod pasporti: '),`AlGaInP/GaAs, λ ≈ 650 nm (aniq qiymati 6-ishda o‘lchanadi); I_max = ${IMAX} mA; P_max = 30 mW; xavflilik sinfi 3B.`),
+    el('div',{class:'rig',style:'margin-top:12px'},el('div',{class:'bench'},cv),el('div',{class:'side'},lP.root,lU.root,lab.root)),note,
+    el('div',{class:'card',style:'margin-top:14px'},el('div',{class:'cols'},I.root,T.root,el('div',null,polOn.root,pa.root),Ls.root),el('div',{class:'btns'},button('Jadvalga yozish',()=>{const r=read();J.add([+T.get(),I.get(),r.u,r.p,polOn.get()?'polyar. '+pa.get()+'°':''])}))),
+    ...section('Bajarish tartibi',steps(['Tokni noldan boshlab 2 mA qadam bilan oshirib, I, U va P ni jurnalga yozing. Quvvat keskin o‘sa boshlagan sohada qadamni 0,5 mA gacha kichraytiring. <b>Tokni 60 mA dan oshirmang.</b>','P(I) grafigining chiziqli qismini tok o‘qigacha davom ettirib, bo‘sag‘aviy tok <span class="f">I_b</span> ni toping; qiyalikdan <span class="f">ΔP/ΔI</span> ni aniqlang.','Differensial kvant samaradorligi: <span class="f">η_d = (λ[µm] / 1,24) · ΔP/ΔI [W/A]</span>. To‘liq FIK: <span class="f">η = P / (U·I)</span>.','O‘lchashni 35 °C va 50 °C da takrorlang. <span class="f">ln I_b</span> ning T ga bog‘lanishidan xarakteristik harorat <span class="f">T₀</span> ni toping: <span class="f">I_b(T) = I₀·exp(T/T₀)</span>.','Polyarizatorni qo‘yib, bo‘sag‘adan past (0,8·I_b) va yuqori (1,3·I_b) toklarda P_max va P_min ni o‘lchang, qutblanish darajalarini taqqoslang.','Uch xil L uchun dog‘ o‘qlari a va b ni yozib, yoyilish burchaklarini hisoblang: <span class="f">θ = 2·arctg(a / 2L)</span>. Faol sohaning o‘lchamini <span class="f">d ≈ λ/θ</span> dan baholang.'])),
+    ...section('O‘lchash jurnali',J.root),...section('Grafik P(I): qizil — 20 °C, sariq — 35 °C, ko‘k — 50 °C',el('div',{class:'card'},pc)),
+    ...section('Natijani tekshirish',verify([{label:'Bo‘sag‘aviy tok I_b (20 °C)',unit:'mA',truth:()=>Ith20,tol:.04},{label:'Qiyalik ΔP/ΔI (20 °C)',unit:'W/A',truth:()=>S,tol:.05},{label:'Xarakteristik harorat T₀',unit:'K',truth:()=>T0,tol:.12},{label:'Katta yoyilish burchagi θ⊥',unit:'°',truth:()=>thP,tol:.06}])),
+    theory('Qisqacha nazariya','<p>Bo‘sag‘adan pastda diod yorug‘lik diodi kabi ishlaydi (spontan nurlanish, qutblanmagan). Bo‘sag‘adan yuqorida <span class="f">P = η_d·(hν/e)·(I − I_b)</span>. Harorat ortganda bo‘sag‘aviy tok eksponensial o‘sadi. Faol sohaning chiqish yuzasi juda kichik (≈0,2 × 3 µm) bo‘lgani uchun dasta difraksiya tufayli kuchli va nosimmetrik yoyiladi.</p>'));
+  draw();onResize(draw)}});
+
+/* ================= 6-ish: interferension usul ================= */
+LABS.push({id:6,short:'Interferension usul',kind:'Yung tajribasi, panjara',title:'Lazer nurlanishining to‘lqin uzunligini interferension usul yordamida aniqlash',
+goal:'Yung qo‘sh tirqishi va difraksion panjara hosil qilgan manzarada yo‘llar koordinatalarini o‘lchab, He–Ne va yarimo‘tkazgichli lazerlarning to‘lqin uzunligini aniqlang.',
+build(main){const lamLD=Math.round(V(6,'ld',636,672)),gU=Math.round(V(6,'gr',120,420)/10)*10;let mx=null;
+  const cv=el('canvas'),lx=lcd('Kursor koordinatasi x','mm');
+  const src=select({label:'Lazer',options:[['632.8','He–Ne lazeri'],[String(lamLD),'Yarimo‘tkazgichli lazer (λ noma’lum)']],onchange:draw});
+  const elem=select({label:'Optik element',options:[['y0.1','Qo‘sh tirqish, d = 0,10 mm'],['y0.2','Qo‘sh tirqish, d = 0,20 mm'],['y0.3','Qo‘sh tirqish, d = 0,30 mm'],['g50','Panjara, 50 shtrix/mm'],['g100','Panjara, 100 shtrix/mm'],['g300','Panjara, 300 shtrix/mm'],['g600','Panjara, 600 shtrix/mm'],['g'+gU,'Noma’lum panjara']],value:'y0.2',onchange:()=>{auto();draw()}});
+  const L=slider({label:'Ekrangacha masofa L',min:.3,max:3,step:.05,value:2,unit:'m',oninput:draw});
+  const zoom=select({label:'Ekranning ko‘rinadigan qismi',options:[['20','±20 mm'],['50','±50 mm'],['200','±200 mm'],['800','±800 mm'],['2000','±2000 mm']],value:'50',onchange:draw});
+  const J=journal([{h:'Lazer'},{h:'Element'},{h:'L, m',d:2},{h:'x, mm',d:1},{h:'Tartib m',edit:true},{h:'λ, nm',edit:true}],{empty:'Jurnal bo‘sh. Ekran ustida kerakli yo‘l (dog‘) markazini bosing — uning koordinatasi jurnalga yoziladi.'});
+  function auto(){zoom.set(elem.get()[0]==='y'?'50':(+elem.get().slice(1)>=300?'2000':'800'))}
+  function inten(xmm,lam){const e=elem.get(),x=xmm*1e-3,l=L.get();if(e[0]==='y'){const d=+e.slice(1)*1e-3,b=.04e-3,s=x/Math.hypot(x,l),u=Math.PI*b*s/lam,v=Math.PI*d*s/lam;return(u?Math.sin(u)/u:1)**2*Math.cos(v)**2}
+    const d=1e-3/+e.slice(1);let I=0;const sig=Math.max(.9,+zoom.get()/260);for(let m=-Math.floor(d/lam);m<=Math.floor(d/lam);m++){const s=m*lam/d;if(Math.abs(s)>=1)continue;const xm=l*s/Math.sqrt(1-s*s)*1e3;I+=Math.exp(-(((xmm-xm)/sig)**2))/(1+.55*m*m)}return Math.min(1,I)}
+  function draw(){const lam=+src.get()*1e-9,Z=+zoom.get(),{g,w,h}=fit(cv,300);g.clearRect(0,0,w,h);const x0=16,x1=w-16,X=x=>x0+(x+Z)/(2*Z)*(x1-x0);
+    for(let px=x0;px<x1;px++){const xm=-Z+(px-x0)/(x1-x0)*2*Z,v=inten(xm,lam);g.fillStyle=nm2rgb(lam*1e9,Math.pow(v,.55));g.fillRect(px,20,1,110)}
+    g.strokeStyle=nm2rgb(lam*1e9,1);g.lineWidth=1.4;g.beginPath();for(let px=x0;px<x1;px++){const xm=-Z+(px-x0)/(x1-x0)*2*Z,y=250-inten(xm,lam)*100;px===x0?g.moveTo(px,y):g.lineTo(px,y)}g.stroke();gLabel(g,'intensivlik taqsimoti',x0,146,'left');
+    g.fillStyle='#d8e2ea';g.fillRect(x0,262,x1-x0,1);const step=Z/10;for(let k=-10;k<=10;k++){const xx=X(k*step);g.fillRect(xx,262,1,k%5?5:10);if(k%5===0)gLabel(g,String(k*step),xx,288)}gLabel(g,'x, mm',x1,146,'right');
+    if(mx!=null){g.strokeStyle='rgba(255,255,255,.7)';g.setLineDash([4,4]);g.beginPath();g.moveTo(X(mx),16);g.lineTo(X(mx),262);g.stroke();g.setLineDash([])}}
+  const toX=e=>{const r=cv.getBoundingClientRect(),Z=+zoom.get();let x=-Z+(e.clientX-r.left-16)/(r.width-32)*2*Z;const res=Z/200;return Math.round(x/res)*res};
+  cv.addEventListener('pointermove',e=>{mx=toX(e);lx.set(mx,+zoom.get()<=50?1:0);draw()});
+  cv.addEventListener('click',e=>{const x=toX(e);J.add([src.get()==='632.8'?'He–Ne':'Yarimo‘tk.',elem.root.querySelector('select').selectedOptions[0].textContent,L.get(),x,'',''])});
+  main.append(el('div',{class:'rig'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Yuqorida — ekrandagi manzara, pastda — intensivlik grafigi va millimetrli shkala. Kursor bilan yo‘l markazini ko‘rsating va bosing. Aniqlik ekranning ko‘rinadigan qismiga bog‘liq — mayda yo‘llar uchun kichik oraliqni tanlang.')),el('div',{class:'side'},lx.root,el('div',{class:'card'},src.root,elem.root,L.root,zoom.root))),
+    ...section('Bajarish tartibi',steps(['<b>Yung usuli.</b> He–Ne lazeri va d = 0,20 mm li qo‘sh tirqishni tanlang, L = 2 m. Bir-biridan uzoq ikkita minimum (yoki maksimum) koordinatasini yozib, ular orasidagi masofani oraliqlar soni N ga bo‘ling: <span class="f">Δx = l / N</span>.','To‘lqin uzunligini hisoblang: <span class="f">λ = d·Δx / L</span>. O‘lchashni yana ikki xil L va boshqa d uchun takrorlang.','<b>Panjara usuli.</b> 100 shtrix/mm li panjarani tanlang, L = 1 m. m = ±1, ±2, ±3 tartibli maksimumlar koordinatalarini yozing; <span class="f">x_m = (x₊ − x₋)/2</span>.','<span class="f">sin φ = x_m / √(x_m² + L²)</span>, <span class="f">λ = d·sin φ / m</span>, bu yerda d = 1/n₀. Katta burchaklarda sin φ ≈ tg φ taqribidan foydalanmang.','Yarimo‘tkazgichli lazerni tanlab, uning noma’lum to‘lqin uzunligini panjara yordamida aniqlang.','He–Ne lazeri bilan noma’lum panjaraning shtrixlar sonini aniqlang.','Ikki usulning aniqligini taqqoslang: qaysi birida nisbiy xatolik kichik va nima uchun?'])),
+    ...section('O‘lchash jurnali',J.root),
+    ...section('Natijani tekshirish',verify([{label:'He–Ne lazerining λ si (Yung usuli)',unit:'nm',truth:()=>632.8,tol:.03},{label:'Yarimo‘tkazgichli lazerning λ si',unit:'nm',truth:()=>lamLD,tol:.012},{label:'Noma’lum panjara',unit:'shtrix/mm',truth:()=>gU,tol:.02}])),
+    theory('Qisqacha nazariya','<p>Yung tajribasida qo‘shni yo‘llar orasidagi masofa <span class="f">Δx = λL/d</span>. Yo‘llar intensivligi bitta tirqishdagi difraksiya taqsimoti bilan modulyatsiyalangan. Difraksion panjaraning bosh maksimumlari: <span class="f">d·sin φ = mλ</span>; ular tor va yorqin, shuning uchun koordinatalari aniqroq o‘lchanadi.</p>'));
+  draw();onResize(draw)}});
+/* ================= 7–9-ishlar: dastaning divergensiyasi ================= */
+function beamLab(id,cfg){return{id,short:cfg.short,kind:'dasta profili, Θ, w₀',title:cfg.title,goal:cfg.goal,
+build(main){const w0=V(id,'w0',cfg.w0[0],cfg.w0[1])*1e-3,M2=V(id,'m2',1.02,1.22),xc0=V(id,'xc',-.6,.6),pt=V(id,'pt',-.06,.06),F=.5;
+  let prof=[],scanning=false,showIe=false;
+  const line=select({label:'Generatsiya chizig‘i',options:cfg.lines.map(l=>[String(l[0]),`${String(l[0]).replace('.',',')} nm — ${l[1]}`])  ,onchange:()=>{prof=[];draw()}});
+  const lam=()=>+line.get()*1e-9,theta=()=>M2*lam()/(Math.PI*w0),zR=()=>w0/theta();
+  const z=slider({label:'Detektorgacha masofa z',min:.5,max:12,step:.25,value:2,unit:'m',nudges:[.25],oninput:()=>{prof=[];draw()}});
+  const x=slider({label:'Detektor koordinatasi x (mikrometr)',min:-15,max:15,step:.01,value:-15,unit:'mm',nudges:[.01,.1,1],nudgeLabel:k=>String(k).replace('.',','),oninput:draw});
+  const lens=check('Fokal dog‘ usuli: f = 500 mm li linza, detektor fokal tekislikda',false,()=>{prof=[];draw()});
+  const stp=select({label:'Avtomatik skanerlash qadami',options:[['0.5','0,5 mm'],['0.2','0,2 mm'],['0.05','0,05 mm'],['0.01','0,01 mm']],value:'0.2'});
+  const cv=el('canvas'),pc=el('canvas'),dz=el('canvas'),li=lcd('Fototok I','µA'),lz=lcd('z / x','');
+  const wz=()=>lens.get()?F*theta():w0*Math.sqrt(1+(z.get()/zR())**2),xc=()=>lens.get()?0:xc0+pt*z.get();
+  const ideal=xx=>{const w=wz()*1e3;return 85*(w0*1e3/w)**2*Math.exp(-2*(xx-xc())**2/(w*w))};
+  const read=xx=>Math.max(0,noisy(ideal(xx),.006,.002)+.002);
+  const J=journal([{h:'Chiziq, nm'},{h:'z, m',d:2},{h:'I_max, µA',d:3},{h:'x_A, mm',edit:true},{h:'x_B, mm',edit:true},{h:'d = x_B − x_A, mm',edit:true}],{empty:'Jurnal bo‘sh. Profilni skanerlang, so‘ng “Skaner natijasini jurnalga qo‘shish”ni bosing va x_A, x_B, d ustunlarini o‘zingiz to‘ldiring.'});
+  function draw(){const{g,w,h}=fit(cv,230),nm=+line.get();g.clearRect(0,0,w,h);gRail(g,w,200);gBox(g,18,92,96,40);gLabel(g,cfg.name,66,117,'center','#dfe8ef');
+    const xa=114,xb=w-170,zz=lens.get()?6:z.get(),xd=xa+(xb-xa)*zz/12,sc=5,hw=q=>Math.max(1.5,w0*Math.sqrt(1+(q/zR())**2)*1e3*sc);
+    g.fillStyle=nm2rgb(nm,.55);g.beginPath();g.moveTo(xa,112-hw(0));for(let q=0;q<=zz;q+=.25)g.lineTo(xa+(xb-xa)*q/12,112-hw(q));for(let q=zz;q>=0;q-=.25)g.lineTo(xa+(xb-xa)*q/12,112+hw(q));g.fill();
+    g.fillStyle='#31414e';for(let q=0;q<=12;q+=2){const xx=xa+(xb-xa)*q/12;g.fillRect(xx,200,1,8);gLabel(g,q+' m',xx,222)}
+    if(lens.get()){g.strokeStyle='#9fd0ff';g.lineWidth=2;g.beginPath();g.ellipse(xd-46,112,6,30,0,0,7);g.stroke();gLabel(g,'linza',xd-46,160)}
+    const yy=112+Math.max(-70,Math.min(70,(x.get()-xc())*sc*(lens.get()?8:1)));gBox(g,xd,yy-7,14,14,'#3a3320','#c9b458');g.strokeStyle='#52677a';g.beginPath();g.moveTo(xd+7,36);g.lineTo(xd+7,190);g.stroke();gLabel(g,'detektor',xd+7,28);
+    /* dog‘ning ko‘rinishi */const sx=w-140,sy=40,S=120,ww=wz()*1e3,view=Math.max(2,Math.ceil(ww*2.6));g.fillStyle='#05080a';g.fillRect(sx,sy,S,S);
+    const gr=g.createRadialGradient(sx+S/2,sy+S/2,0,sx+S/2,sy+S/2,ww/view*S/2*1.5);gr.addColorStop(0,nm2rgb(nm,1));gr.addColorStop(.45,nm2rgb(nm,.4));gr.addColorStop(1,nm2rgb(nm,0));g.fillStyle=gr;g.fillRect(sx,sy,S,S);
+    gLabel(g,`ekrandagi dog‘ (kadr ${view*2}×${view*2} mm)`,sx+S/2,sy+S+16);
+    li.set(read(x.get()),3);lz.set(fmt(z.get(),2)+' m / '+fmt(x.get(),2)+' mm');drawProf()}
+  function drawProf(){const im=prof.length?Math.max(...prof.map(p=>p[1])):0;
+    plot(pc,{series:[{pts:prof,color:nm2rgb(+line.get(),1).replace(/,[^,]+\)$/,',1)'),line:true,r:2}],xlabel:'x, mm',ylabel:'I, µA',ymin:0,empty:'Profil hali o‘lchanmagan. “Profilni avtomatik skanerlash”ni bosing yoki detektorni qo‘lda siljitib, nuqtalarni qo‘shing.',
+      hlines:showIe&&im?[{y:im/Math.E**2,label:'I_max / e² = '+fmt(im/Math.E**2,3)+' µA',color:'#1f6fb5'}]:[],hover:(a,b)=>`x = ${fmt(a,3)} mm;  I = ${fmt(b,3)} µA`})}
+  function drawDz(){const pts=J.rows.map((r,i)=>[r[1],J.num(i,5)]).filter(p=>Number.isFinite(p[1]));const s=[{pts,color:'#c0182b'}];
+    if(pts.length>=3){const f=linfit(pts),xs=pts.map(p=>p[0]);s.push({pts:[[Math.min(...xs),f.k*Math.min(...xs)+f.b],[Math.max(...xs),f.k*Math.max(...xs)+f.b]],color:'#5B6B7A',line:true,dots:false})}
+    plot(dz,{series:s,xlabel:'z, m',ylabel:'d, mm',ymin:0,empty:'Jurnaldagi “d” ustunini to‘ldiring — nuqtalar shu yerda paydo bo‘ladi.'})}
+  J.onchange=drawDz;
+  function scan(){if(scanning)return;scanning=true;prof=[];const st=+stp.get(),ww=wz()*1e3,a=Math.max(-15,xc()-3.2*ww),b=Math.min(15,xc()+3.2*ww);let cur=Math.round(a/st)*st;
+    const go=()=>{for(let i=0;i<Math.max(1,Math.round(.06/st*8));i++){if(cur>b){scanning=false;draw();return}x.set(cur);prof.push([+cur.toFixed(3),read(cur)]);cur+=st}draw();raf=requestAnimationFrame(go)};go()}
+  main.append(el('p',{class:'pass'},el('b',null,'Stend: '),'uzunligi 12 m li optik yo‘lak; fotodetektor diafragmasi 0,05 mm; mikrometr qadami 0,01 mm. Dasta o‘qi mikrometr noliga aniq to‘g‘ri kelmasligi mumkin — markazni profil maksimumidan toping.'),
+    el('div',{class:'rig',style:'margin-top:12px'},el('div',{class:'bench'},cv,el('div',{class:'cap'},'Dastaning ko‘ndalang o‘lchami sxemada kattalashtirib ko‘rsatilgan.')),el('div',{class:'side'},li.root,lz.root)),
+    el('div',{class:'card',style:'margin-top:14px'},el('div',{class:'cols'},line.root,z.root,x.root,stp.root),lens.root,
+      el('div',{class:'btns'},button('Profilni avtomatik skanerlash',scan),button('Joriy nuqtani profilga qo‘shish',()=>{prof.push([x.get(),read(x.get())]);prof.sort((a,b)=>a[0]-b[0]);drawProf()},'ghost'),button('I_max/e² sathini ko‘rsatish',()=>{showIe=!showIe;drawProf()},'ghost'),
+        button('Skaner natijasini jurnalga qo‘shish',()=>{if(!prof.length)return;J.add([line.get().replace('.',','),lens.get()?'fokus (f = 0,5 m)':z.get(),Math.max(...prof.map(p=>p[1])),'','',''])}))),
+    ...section('Dasta profili I(x)',el('div',{class:'card'},pc)),
+    ...section('Bajarish tartibi',steps(cfg.steps)),
+    ...section('O‘lchash jurnali',J.root),...section('Grafik d(z)',el('div',{class:'card'},dz)),
+    ...section('Natijani tekshirish',verify([{label:`To‘liq divergensiya Θ (${cfg.lines[0][0].toString().replace('.',',')} nm)`,unit:'mrad',truth:()=>2*M2*cfg.lines[0][0]*1e-9/(Math.PI*w0)*1e3,tol:.06},{label:'Bo‘g‘iz radiusi w₀ (d(z) ning z → 0 dagi qiymatidan)',unit:'mm',truth:()=>w0*1e3,tol:.12},{label:'Dasta sifati M² = π·w₀·θ / λ',unit:'',truth:()=>M2,tol:.12}])),
+    theory('Qisqacha nazariya',`<p>Gauss dastasining radiusi <span class="f">w(z) = w₀·√(1 + (z/z_R)²)</span>, <span class="f">z_R = π·w₀²/(M²·λ)</span>. Uzoq zonada (z ≫ z_R) dasta konus bo‘ylab yoyiladi; yarim burchak <span class="f">θ = M²·λ/(π·w₀)</span>, to‘liq burchak <span class="f">Θ = 2θ</span>. Dasta diametri <span class="f">d = 2w</span> profilning <span class="f">I_max/e² = 0,135·I_max</span> sathidagi kengligi sifatida aniqlanadi. Ikki kesim usuli: <span class="f">Θ = (d₂ − d₁)/(z₂ − z₁)</span> — faqat uzoq zonada to‘g‘ri. Umumiy holda <span class="f">d² = d₀² + Θ²·z²</span>: d² ning z² ga bog‘lanishi to‘g‘ri chiziq. Fokal dog‘ usuli: <span class="f">Θ = d_f / f</span>.</p>${cfg.extra||''}`));
+  draw();drawDz();onResize(()=>{draw();drawDz()})}}}
+const commonSteps=n=>[`Generatsiya chizig‘ini tanlang (${n}). z = 1 m da “Profilni avtomatik skanerlash”ni bosing. Tor profil uchun kichik qadam (0,05 yoki 0,01 mm) tanlang.`,'Grafik ustida kursor yordamida <span class="f">I_max</span> ni, so‘ng <span class="f">I_e = 0,135·I_max</span> sathiga mos chap va o‘ng nuqtalar <span class="f">x_A</span>, <span class="f">x_B</span> ni aniqlang (“I_max/e² sathini ko‘rsatish” tugmasi yordam beradi). Natijani jurnalga qo‘shib, x_A, x_B va d ni yozing.','O‘lchashni z = 2, 4, 6, 8, 10, 12 m uchun takrorlang. d(z) grafigi jurnaldagi qiymatlaringizdan avtomatik chiziladi.','Uzoq zonadagi nuqtalar bo‘yicha qiyalikdan <span class="f">Θ = Δd/Δz</span> ni toping (mm/m = mrad). Yaqin zonadagi (z ≲ z_R) nuqtalar to‘g‘ri chiziqdan nima uchun chetlashadi?','d² ning z² ga bog‘lanish grafigini Excelda chizing: qiyalik Θ² ni, ordinata o‘qidagi kesma d₀² = (2w₀)² ni beradi.','<span class="f">θ = Θ/2</span>, <span class="f">z_R = w₀/θ</span> va <span class="f">M² = π·w₀·θ/λ</span> ni hisoblang.','Fokal dog‘ usulini yoqing, fokusdagi profilni 0,01 mm qadam bilan skanerlang va <span class="f">Θ = d_f / f</span> ni oldingi natija bilan taqqoslang.'];
+LABS.push(beamLab(7,{short:'He–Ne: divergensiya',name:'He–Ne lazer',title:'Geliy-neon lazer nurining divergensiya burchagini aniqlash',goal:'He–Ne lazeri dastasining profilini turli masofalarda skanerlab, dasta diametri, divergensiya burchagi, bo‘g‘iz radiusi va dasta sifati parametrini aniqlang.',w0:[.30,.45],lines:[[632.8,'qizil']],steps:commonSteps('632,8 nm')}));
+LABS.push(beamLab(8,{short:'Argon: divergensiya',name:'Ar⁺ lazer',title:'Argon lazer nurining divergensiya burchagini aniqlash',goal:'Argon ionli lazerining 488,0 va 514,5 nm chiziqlari uchun divergensiya burchagini aniqlang va uning to‘lqin uzunligiga proporsionalligini tekshiring.',w0:[.55,.75],lines:[[488.0,'ko‘k'],[514.5,'yashil'],[457.9,'binafsha-ko‘k']],
+  steps:[...commonSteps('avval 488,0 nm'),'O‘lchashlarni 514,5 nm chizig‘i uchun takrorlang. <span class="f">Θ₅₁₄ / Θ₄₈₈</span> nisbatni nazariy qiymat 514,5/488,0 = 1,054 bilan taqqoslang.'],extra:'<p>Argon lazerida lazer o‘tishlari Ar⁺ ionining 4p → 4s sathlari orasida yuz beradi; uyg‘otish ikki bosqichli bo‘lgani uchun kuchaytirish tok zichligining kvadratiga proporsional. Real argon lazerlari 4-xavflilik sinfiga kiradi — virtual stend ularni xavfsiz o‘rganish imkonini beradi.</p>'}));
+LABS.push(beamLab(9,{short:'Kripton: divergensiya',name:'Kr⁺ lazer',title:'Kripton lazer nurining divergensiya burchagini aniqlash',goal:'Kripton ionli lazerining qizil, yashil va binafsha chiziqlari uchun divergensiyani aniqlang hamda 7–9-ishlar natijalarini qiyosiy tahlil qiling.',w0:[.6,.8],lines:[[647.1,'qizil'],[530.9,'yashil'],[413.1,'binafsha']],
+  steps:[...commonSteps('avval 647,1 nm'),'530,9 va 413,1 nm chiziqlari uchun Θ ni aniqlang. Θ ning λ ga bog‘lanish grafigi koordinata boshidan o‘tuvchi to‘g‘ri chiziq bo‘lishini tekshiring.','7-, 8-, 9-ishlar natijalarini bitta jadvalga jamlang: λ, Θ, w₀, z_R, M². Qaysi lazerning dastasi eng kam yoyiladi va nima uchun?'],extra:'<p>Kripton lazeri binafshadan yaqin infraqizilgacha o‘ndan ortiq chiziqda generatsiya beradi; eng kuchlisi 647,1 nm. Argon–kripton aralashmali lazerlar “oq” lazer nurini hosil qiladi.</p>'}));
+
+/* ================= o‘qituvchi kaliti ================= */
+LABS.push({id:10,short:'O‘qituvchi uchun',kind:'variant kalitlari',title:'Variantlar bo‘yicha to‘g‘ri javoblar',goal:'Har bir variant uchun stendlarning yashirin parametrlari. Bo‘lim parol bilan ochiladi.',
+build(main){const inp=el('input',{type:'password',placeholder:'Parol','aria-label':'Parol',style:'border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 10px'}),out=el('div');
+  const open=()=>{if(inp.value!=='UrDU-2026'){out.textContent='Parol noto‘g‘ri.';return}const keep=VARIANT,rows=[];
+    for(let v=1;v<=30;v++){VARIANT=v;const w7=V(7,'w0',.30,.45),m7=V(7,'m2',1.02,1.22),w8=V(8,'w0',.55,.75),m8=V(8,'m2',1.02,1.22),w9=V(9,'w0',.6,.8),m9=V(9,'m2',1.02,1.22),th=(l,w,m)=>2*m*l*1e-9/(Math.PI*w*1e-3)*1e3;
+      rows.push([v,fmt(V(2,'pol',.955,.995),3),Math.round(V(2,'phi0',5,175)),fmt(V(2,'iopt',5.8,8.2),1),fmt(+V(3,'k',.08,.24).toFixed(3),3),fmt(.6+V(4,'d1',-.04,.04),3),fmt(V(4,'p',2.2,4.8),2),fmt(V(5,'ith',18,30),1),fmt(V(5,'s',.62,.92),3),fmt(V(5,'t0',105,155),0),Math.round(V(6,'ld',636,672)),Math.round(V(6,'gr',120,420)/10)*10,fmt(th(632.8,w7,m7),3),fmt(w7,3),fmt(th(488,w8,m8),3),fmt(w8,3),fmt(th(647.1,w9,m9),3),fmt(w9,3)])}
+    VARIANT=keep;const H=['Var.','2: P','2: φ₀, °','2: I_opt, mA','3: k','4: D (F2)','4: P₀, mW','5: I_b, mA','5: ΔP/ΔI','5: T₀, K','6: λ, nm','6: panjara','7: Θ, mrad','7: w₀, mm','8: Θ₄₈₈','8: w₀','9: Θ₆₄₇','9: w₀'];
+    out.textContent='';out.append(el('div',{class:'scroll'},el('table',{class:'j'},el('thead',null,el('tr',null,H.map(h=>el('th',null,h)))),el('tbody',null,rows.map(r=>el('tr',null,r.map(c=>el('td',null,String(c)))))))))};
+  main.append(el('div',{class:'verify'},inp,button('Ochish',open)),out)}});
+
+boot();
+</script>
+</body>
+</html>
