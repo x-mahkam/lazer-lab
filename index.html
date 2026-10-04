@@ -548,6 +548,56 @@ build(main){const inp=el('input',{type:'password',placeholder:'Parol','aria-labe
     VARIANT=keep;const H=['Var.','2: P','2: φ₀, °','2: I_opt, mA','3: k','4: D (F2)','4: P₀, mW','5: I_b, mA','5: ΔP/ΔI','5: T₀, K','6: λ, nm','6: panjara','7: Θ, mrad','7: w₀, mm','8: Θ₄₈₈','8: w₀','9: Θ₆₄₇','9: w₀'];
     out.textContent='';out.append(el('div',{class:'scroll'},el('table',{class:'j'},el('thead',null,el('tr',null,H.map(h=>el('th',null,h)))),el('tbody',null,rows.map(r=>el('tr',null,r.map(c=>el('td',null,String(c)))))))))};
   main.append(el('div',{class:'verify'},inp,button('Ochish',open)),out)}});
+/* ================= natijalarni topshirish va o‘qituvchi paneli ================= */
+/* Google Apps Script veb-ilovasi manzili — SOZLASH.md ga qarang */
+const BACKEND='PASTE_APPS_SCRIPT_URL_HERE';
+const TRACK={journals:{},checks:{}};
+const _journal=journal;journal=function(cols,opt){const j=_journal(cols,opt);(TRACK.journals[current]=TRACK.journals[current]||[]).push({cols:cols.map(c=>c.h),j});return j};
+const _verify=verify;verify=function(items){const items2=items.map(it=>Object.assign({},it,{_label:it.label}));const root=_verify(items2);
+  /* natijalarni ushlab qolish: har bir tekshirish qatoridagi input va res */
+  [...root.querySelectorAll('.verify')].forEach((row,i)=>{const it=items[i],inp=row.querySelector('input'),res=row.querySelector('.res');
+    row.querySelector('button').addEventListener('click',()=>{setTimeout(()=>{(TRACK.checks[current]=TRACK.checks[current]||{})[it.label]={value:inp.value,ok:res.classList.contains('ok'),msg:res.textContent}},0)})});
+  return root};
+function parseWho(){const w=($('#who').value||'').trim();return w}
+function payload(lab){const labObj=LABS.find(l=>l.id===lab);return{action:'submit',name:parseWho(),variant:VARIANT,lab,title:labObj?labObj.title:'',
+  checks:TRACK.checks[lab]||{},journals:(TRACK.journals[lab]||[]).map(x=>({cols:x.cols,rows:x.j.rows})),ua:navigator.userAgent.slice(0,80),ts:new Date().toISOString()}}
+async function api(body){if(!BACKEND.startsWith('http'))throw new Error('Server manzili sozlanmagan (BACKEND).');const r=await fetch(BACKEND,{method:'POST',body:JSON.stringify(body)});const t=await r.text();try{return JSON.parse(t)}catch(e){throw new Error('Server javobi noto‘g‘ri: '+t.slice(0,80))}}
+function submitCard(lab){const st=el('p',{class:'res'});const key='sub_'+lab+'_'+VARIANT;const prev=store.get(key,'');
+  if(prev){try{const p=JSON.parse(prev);st.className='res ok';st.textContent=`Oldin topshirilgan: ${p.at} (kod ${p.id}). Qayta topshirsangiz, yangi yozuv sifatida saqlanadi.`}catch(e){}}
+  const go=async()=>{const who=parseWho();if(who.length<5||!/\d/.test(who)){st.className='res bad';st.textContent='Yuqoridagi “Talaba” maydoniga familiya, ism va guruh raqamini kiriting (masalan: Karimov A., 401-guruh).';$('#who').focus();return}
+    const p=payload(lab);const nJ=p.journals.reduce((s,j)=>s+j.rows.length,0),nC=Object.keys(p.checks).length;
+    if(nJ===0&&nC===0){st.className='res bad';st.textContent='Jurnal bo‘sh va hech bir natija tekshirilmagan — topshirishga hali erta.';return}
+    st.className='res';st.textContent='Yuborilmoqda…';
+    try{const r=await api(p);if(!r.ok)throw new Error(r.error||'xato');const at=new Date().toLocaleString('uz-UZ');store.set(key,JSON.stringify({id:r.id,at}));st.className='res ok';st.textContent=`Topshirildi. Tasdiq kodi: ${r.id}. Jurnal satrlari: ${nJ}, tekshirilgan natijalar: ${nC}.`;typeof SFX!=='undefined'&&SFX.beep()}
+    catch(e){st.className='res bad';st.textContent='Yuborilmadi: '+e.message+' Internetni tekshiring yoki o‘qituvchiga xabar bering.'}};
+  return el('div',{class:'card',style:'margin-top:14px'},el('h2',{style:'margin:0 0 8px'},'Natijani o‘qituvchiga topshirish'),
+    el('p',{class:'pass'},'Topshirilganda jurnal(lar)dagi barcha satrlar, “Natijani tekshirish” maydonlarida kiritgan qiymatlaringiz va ularning to‘g‘ri/noto‘g‘riligi, variant raqami va vaqt o‘qituvchi jadvaliga yoziladi. Avval barcha o‘lchashlarni bajaring, natijalarni tekshiring, so‘ng topshiring.'),
+    el('div',{class:'btns'},button('Natijani topshirish',go)),st)}
+/* show() ni kengaytirish: har bir ishga topshirish kartasi */
+const _show=show;show=function(id){_show(id);const lab=LABS.find(l=>l.id===id);if(lab&&lab.id<=9)$('#main').append(submitCard(lab.id))};
+/* ---------- o‘qituvchi paneli ---------- */
+LABS.push({id:11,short:'Natijalar (o‘qituvchi)',kind:'topshiriqlarni ko‘rish va baholash',title:'Talabalar natijalari',goal:'Topshirilgan ishlar ro‘yxati. Parol bilan ochiladi; har bir ishni ochib, jurnal va tekshirish natijalarini ko‘rish, baho va izoh yozish mumkin.',
+build(main){const pw=el('input',{type:'password',placeholder:'O‘qituvchi paroli','aria-label':'Parol',style:'border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 10px'}),out=el('div'),flt=el('input',{placeholder:'Qidirish: familiya, guruh, ish raqami…',style:'border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 10px;width:100%;margin:10px 0'});
+  let rows=[];
+  const render=()=>{const q=flt.value.toLowerCase();const list=rows.filter(r=>!q||(r.name+' '+r.lab+' '+r.title).toLowerCase().includes(q)).sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+    out.textContent='';if(!list.length){out.append(el('p',{class:'empty'},'Hali topshiriqlar yo‘q.'));return}
+    const tbl=el('table',{class:'j'},el('thead',null,el('tr',null,['Sana','Talaba','Var.','Ish','Tekshiruv','Baho','Izoh',''].map(h=>el('th',null,h)))));
+    const tb=el('tbody');list.forEach(r=>{const ch=r.checks||{},n=Object.keys(ch).length,okN=Object.values(ch).filter(c=>c.ok).length;
+      const det=el('tr',{hidden:true}),td=el('td',{colspan:'8',style:'text-align:left;white-space:normal'});det.append(td);
+      const tr=el('tr',null,el('td',null,(r.ts||'').replace('T',' ').slice(0,16)),el('td',{style:'text-align:left'},r.name),el('td',null,String(r.variant)),el('td',{style:'text-align:left'},`${r.lab}-ish`),
+        el('td',null,n?`${okN}/${n}`:'—'),el('td',null,r.grade||'—'),el('td',{style:'text-align:left;max-width:14rem;overflow:hidden;text-overflow:ellipsis'},r.comment||''),
+        el('td',null,el('button',{onclick:()=>{det.hidden=!det.hidden;if(!det.hidden&&!td.children.length)td.append(detail(r))}},'▼')));
+      tb.append(tr,det)});tbl.append(tb);out.append(el('div',{class:'scroll'},tbl))};
+  function detail(r){const box=el('div');box.append(el('p',{class:'pass'},el('b',null,r.title),` — ${r.name}, variant ${r.variant}, ${(r.ts||'').replace('T',' ').slice(0,19)}`));
+    const ch=r.checks||{};if(Object.keys(ch).length){const t=el('table',{class:'j'},el('thead',null,el('tr',null,['Tekshirilgan kattalik','Talaba qiymati','Natija'].map(h=>el('th',null,h)))),el('tbody',null,Object.entries(ch).map(([k,v])=>el('tr',null,el('td',{style:'text-align:left;white-space:normal'},k),el('td',null,v.value),el('td',{style:'color:'+(v.ok?'var(--ok)':'var(--warn)')},v.ok?'to‘g‘ri':'noto‘g‘ri')))));box.append(el('h3',{style:'margin:10px 0 4px;font-size:.95rem'},'Natijani tekshirish'),t)}
+    (r.journals||[]).forEach((j,i)=>{const head=el('tr',null,el('th',null,'№'),j.cols.map(c=>el('th',null,c)));
+      const body=el('tbody',null,j.rows.map((row,k)=>el('tr',null,el('td',null,String(k+1)),row.map(v=>el('td',null,typeof v==='number'?fmt(v,3):String(v??''))))));
+      box.append(el('h3',{style:'margin:10px 0 4px;font-size:.95rem'},`Jurnal ${i+1} (${j.rows.length} satr)`),el('div',{class:'scroll'},el('table',{class:'j'},el('thead',null,head),body)))});
+    const g=el('input',{value:r.grade||'',placeholder:'baho (0–100 yoki 2–5)',style:'width:9rem;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px'}),c=el('input',{value:r.comment||'',placeholder:'izoh talabaga',style:'flex:1;min-width:12rem;border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:6px 8px'}),m=el('span',{class:'res'});
+    box.append(el('div',{class:'verify',style:'margin-top:10px'},g,c,button('Bahoni saqlash',async()=>{m.textContent='Saqlanmoqda…';try{const res=await api({action:'grade',pw:pw.value,id:r.id,grade:g.value,comment:c.value});if(!res.ok)throw new Error(res.error||'xato');r.grade=g.value;r.comment=c.value;m.className='res ok';m.textContent='Saqlandi.';render()}catch(e){m.className='res bad';m.textContent=e.message}}),m));return box}
+  const load=async()=>{out.textContent='Yuklanmoqda…';try{const r=await api({action:'list',pw:pw.value});if(!r.ok)throw new Error(r.error||'xato');rows=r.rows;store.set('tpw',pw.value);render()}catch(e){out.textContent='Xato: '+e.message}};
+  pw.value=store.get('tpw','');flt.addEventListener('input',render);
+  main.append(el('div',{class:'verify'},pw,button('Ro‘yxatni yuklash',load),button('Excel uchun nusxa',()=>{const t=['Sana\tTalaba\tVariant\tIsh\tTekshiruv\tBaho\tIzoh',...rows.map(r=>{const ch=r.checks||{};return[(r.ts||'').slice(0,16),r.name,r.variant,r.lab,`${Object.values(ch).filter(c=>c.ok).length}/${Object.keys(ch).length}`,r.grade||'',r.comment||''].join('\t')})].join('\n');navigator.clipboard.writeText(t).then(()=>alert('Nusxa olindi — Excelga qo‘ying.'))},'ghost')),flt,out)}});
 
 boot();
 </script>
